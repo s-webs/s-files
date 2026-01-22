@@ -1,6 +1,6 @@
 <?php
 
-namespace SSystems\SFiles\Middleware;
+namespace Swebs\Sfiles\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;

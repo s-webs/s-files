@@ -26,13 +26,13 @@
     },
     "autoload": {
         "psr-4": {
-            "s-webs\\s-files\\": "src/"
+            "Swebs\\Sfiles\\": "src/"
         }
     },
     "extra": {
         "laravel": {
             "providers": [
-                "s-webs\\s-files\\SFilesServiceProvider"
+                "Swebs\\Sfiles\\SFilesServiceProvider"
             ]
         }
     },

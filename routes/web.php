@@ -1,6 +1,6 @@
 <?php
 
-use SSystems\SFiles\Http\Controllers\FileManagerController;
+use Swebs\Sfiles\Http\Controllers\FileManagerController;
 use Illuminate\Support\Facades\Route;
 
 $prefix = config('sfiles.routes.prefix', 's-files');

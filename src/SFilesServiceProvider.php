@@ -1,10 +1,10 @@
 <?php
 
-namespace SSystems\SFiles;
+namespace Swebs\Sfiles;
 
 use Illuminate\Support\ServiceProvider;
-use SSystems\SFiles\Middleware\FileManagerAuth;
-use SSystems\SFiles\Middleware\FileManagerRateLimit;
+use Swebs\Sfiles\Middleware\FileManagerAuth;
+use Swebs\Sfiles\Middleware\FileManagerRateLimit;
 
 class SFilesServiceProvider extends ServiceProvider
 {
