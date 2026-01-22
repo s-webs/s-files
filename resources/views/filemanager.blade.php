@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/fill/style.css">
 
     {{-- Tailwind + S-Files styles (standalone CSS, no Vite required) --}}
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@3/dist/tailwind.min.css">
+    @vite(['resources/css/app.css'])
     <link rel="stylesheet" href="{{ rtrim(route('sfiles.index'), '/') }}/assets/css/filemanager.standalone.css">
 </head>
 <body class="overflow-hidden h-screen w-full bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
