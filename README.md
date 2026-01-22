@@ -315,6 +315,69 @@ All parameters can be configured in `config/sfiles.php`:
 - Cache settings
 - Logging settings
 
+## Troubleshooting
+
+### Security Advisories Error During Installation
+
+If you encounter an error like this during installation:
+
+```
+Your requirements could not be resolved to an installable set of packages.
+... these were not loaded, because they are affected by security advisories.
+```
+
+This error occurs when your project has dependencies with known security vulnerabilities. The `s-webs/s-files` package itself doesn't have security issues, but Composer blocks installation if any dependency in your project has security advisories.
+
+**Solution 1: Update Dependencies (Recommended)**
+
+Update your project dependencies to versions without security advisories:
+
+```bash
+# Update all dependencies
+composer update
+
+# Or update specific packages
+composer update moonshine/moonshine symfony/http-foundation
+```
+
+**Solution 2: Temporarily Ignore Security Advisories (Not Recommended for Production)**
+
+If you cannot update dependencies immediately, you can temporarily ignore specific advisories by adding them to your `composer.json`:
+
+```json
+{
+    "config": {
+        "audit": {
+            "ignore": [
+                "PKSA-hjzy-c19f-31tw",
+                "PKSA-n4nk-wgpq-4ghg",
+                "PKSA-f5fc-g28z-r13n",
+                "PKSA-7389-zs25-skf1",
+                "PKSA-365x-2zjk-pt47"
+            ]
+        }
+    }
+}
+```
+
+**⚠️ Warning:** Only use Solution 2 temporarily and update your dependencies as soon as possible. Ignoring security advisories leaves your application vulnerable.
+
+**Solution 3: Disable Security Audit (Not Recommended)**
+
+You can disable security audit entirely by adding to `composer.json`:
+
+```json
+{
+    "config": {
+        "audit": {
+            "block-insecure": false
+        }
+    }
+}
+```
+
+**⚠️ Warning:** This completely disables security checks. Use only for development and update dependencies immediately.
+
 ## License
 
 MIT License
