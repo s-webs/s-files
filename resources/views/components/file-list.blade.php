@@ -15,18 +15,18 @@
                 <div class="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600"></div>
                 <div class="absolute inset-0 animate-ping rounded-full h-16 w-16 border-2 border-blue-400 opacity-20"></div>
             </div>
-            <p class="text-lg font-semibold text-gray-700">Загрузка файлов...</p>
+            <p class="text-lg font-semibold text-gray-700" x-text="t('loading_files')"></p>
         </div>
     </div>
 
-    {{-- Поле поиска --}}
+    {{-- Search --}}
     <div class="mb-6">
         <div class="relative">
             <i class="ph ph-magnifying-glass absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl"></i>
             <input
                 type="text"
                 x-model="searchQuery"
-                placeholder="Поиск по файлам..."
+                :placeholder="t('search_placeholder')"
                 class="w-full border-2 border-gray-200 rounded-xl px-12 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-200"
             >
         </div>
@@ -41,7 +41,7 @@
                 : 'bg-white text-gray-600 hover:bg-gray-100'"
             class="px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-2 font-medium">
             <i class="ph ph-grid text-lg"></i>
-            <span>Плитка</span>
+            <span x-text="t('view_grid')"></span>
         </button>
         <button
             @click="toggleView('list')"
@@ -50,7 +50,7 @@
                 : 'bg-white text-gray-600 hover:bg-gray-100'"
             class="px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-2 font-medium">
             <i class="ph ph-list text-lg"></i>
-            <span>Список</span>
+            <span x-text="t('view_list')"></span>
         </button>
     </div>
 
@@ -110,13 +110,13 @@
             <li class="w-full text-center py-16">
                 <div class="flex flex-col items-center">
                     <i class="ph ph-file-x text-6xl text-gray-300 mb-4"></i>
-                    <p class="text-gray-500 text-lg font-medium">Файлы не найдены</p>
+                    <p class="text-gray-500 text-lg font-medium" x-text="t('no_files')"></p>
                 </div>
             </li>
         </template>
     </ul>
 
-    {{-- Режим "Список" --}}
+    {{-- List view --}}
     <ul
         x-show="viewMode === 'list' && !loading"
         x-transition:enter="transition ease-out duration-300"
@@ -182,13 +182,13 @@
             <li class="w-full text-center py-16">
                 <div class="flex flex-col items-center">
                     <i class="ph ph-file-x text-6xl text-gray-300 mb-4"></i>
-                    <p class="text-gray-500 text-lg font-medium">Файлы не найдены</p>
+                    <p class="text-gray-500 text-lg font-medium" x-text="t('no_files')"></p>
                 </div>
             </li>
         </template>
     </ul>
 
-    {{-- Пагинация --}}
+    {{-- Pagination --}}
     <div x-show="pagination.enabled && pagination.totalPages > 1 && !loading"
          x-cloak
          x-transition:enter="transition ease-out duration-300"
@@ -224,9 +224,9 @@
         </button>
 
         <span class="text-sm text-gray-600 ml-6 font-medium">
-            Страница <span x-text="pagination.currentPage" class="font-bold text-blue-600"></span> из <span x-text="pagination.totalPages" class="font-bold"></span>
+            <span x-text="t('page')"></span> <span x-text="pagination.currentPage" class="font-bold text-blue-600"></span> <span x-text="t('of')"></span> <span x-text="pagination.totalPages" class="font-bold"></span>
             <span class="text-gray-400 mx-2">•</span>
-            <span x-text="pagination.total" class="font-bold"></span> файлов
+            <span x-text="pagination.total" class="font-bold"></span> <span x-text="t('files_count')"></span>
         </span>
     </div>
 </div>

@@ -10,10 +10,10 @@
         <div class="flex items-start justify-between mb-6">
             <div>
                 <h2 class="text-2xl font-bold text-gray-800 flex items-center space-x-2"
-                    x-text="renameModal.type === 'file' ? 'Переименовать файл' : 'Переименовать папку'">
+                    x-text="renameModal.type === 'file' ? t('rename_file') : t('rename_folder')">
                 </h2>
                 <p class="text-sm text-gray-500 mt-2">
-                    Текущее имя: <span class="font-semibold text-gray-700" x-text="renameModal.displayName"></span>
+                    <span x-text="t('current_name')"></span>: <span class="font-semibold text-gray-700" x-text="renameModal.displayName"></span>
                 </p>
             </div>
 
@@ -24,7 +24,7 @@
         </div>
 
         <div class="mt-6">
-            <label class="block text-sm font-semibold text-gray-700 mb-2">Новое имя</label>
+            <label class="block text-sm font-semibold text-gray-700 mb-2" x-text="t('new_name')"></label>
             <input type="text"
                    class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm"
                    x-model="renameModal.newName"
@@ -32,18 +32,18 @@
                    autofocus>
             <p class="text-xs text-gray-500 mt-3">
                 <i class="ph ph-info mr-1"></i>
-                Для файла: если не указать расширение — сохранится старое.
+                <span x-text="t('rename_ext_hint')"></span>
             </p>
         </div>
 
         <div class="mt-6 flex justify-end gap-3">
             <button class="px-6 py-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold transition-all duration-200"
                     @click="closeRenameModal()">
-                Отмена
+                <span x-text="t('cancel')"></span>
             </button>
             <button class="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
                     @click="submitRename()">
-                Переименовать
+                <span x-text="t('rename_btn')"></span>
             </button>
         </div>
     </div>

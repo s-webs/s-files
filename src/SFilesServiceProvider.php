@@ -41,6 +41,11 @@ class SFilesServiceProvider extends ServiceProvider
             __DIR__.'/../resources/css' => resource_path('css/vendor/sfiles'),
         ], 'sfiles-assets');
 
+        // Публикация lang (для кастомизации переводов)
+        $this->publishes([
+            __DIR__.'/../resources/lang' => lang_path('vendor/sfiles'),
+        ], 'sfiles-lang');
+
         // Загрузка views
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'sfiles');
 

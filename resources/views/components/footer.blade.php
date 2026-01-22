@@ -4,24 +4,24 @@
             <button @click="passFiles()"
                     class="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 px-6 py-3 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 flex items-center space-x-2">
                 <i class="ph ph-paper-plane-tilt text-lg"></i>
-                <span>Передать выбранные файлы</span>
+                <span x-text="t('pass_selected')"></span>
             </button>
         </div>
         <div class="flex items-center space-x-4 text-sm">
             <div class="bg-slate-600/50 backdrop-blur-sm px-4 py-2 rounded-lg border border-slate-500">
-                <span class="text-slate-300">Выбрано:</span>
+                <span class="text-slate-300" x-text="t('selected') + ':'"></span>
                 <span class="text-white font-bold ml-2" x-text="selectedFilesCount"></span>
             </div>
             <div class="bg-slate-600/50 backdrop-blur-sm px-4 py-2 rounded-lg border border-slate-500">
-                <span class="text-slate-300">Размер:</span>
+                <span class="text-slate-300" x-text="t('size') + ':'"></span>
                 <span class="text-white font-bold ml-2" x-text="formatFileSize(selectedFilesSize)"></span>
             </div>
             <div class="bg-slate-600/50 backdrop-blur-sm px-4 py-2 rounded-lg border border-slate-500">
-                <span class="text-slate-300">Всего:</span>
+                <span class="text-slate-300" x-text="t('total') + ':'"></span>
                 <span class="text-white font-bold ml-2" x-text="totalFilesCount"></span>
             </div>
             <div class="bg-slate-600/50 backdrop-blur-sm px-4 py-2 rounded-lg border border-slate-500">
-                <span class="text-slate-300">Общий размер:</span>
+                <span class="text-slate-300" x-text="t('total_size') + ':'"></span>
                 <span class="text-white font-bold ml-2" x-text="formatFileSize(totalFilesSize)"></span>
             </div>
         </div>

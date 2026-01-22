@@ -1,4 +1,4 @@
-<div class="px-5 py-3 bg-gradient-to-r from-slate-50 to-blue-50 rounded-xl shadow-md border border-gray-200 mb-4">
+<div class="px-5 py-3 bg-gradient-to-r from-slate-50 to-blue-50 rounded-xl shadow-md border border-gray-200">
     <template x-for="(part, index) in breadcrumbs" :key="index">
         <div class="inline-flex items-center">
             <a href="#"

@@ -19,30 +19,35 @@ function fileManager() {
         downloadFilesUrl: '/s-files/download-files',
     };
 
+    const translations = window.sfilesTranslations || { en: {}, ru: {} };
+
     return {
         // 1) State
         currentPath: '',
         directories: [],
         files: [],
-        allFiles: [], // Все файлы для пагинации
+        allFiles: [],
         newFolder: '',
         breadcrumbs: [],
         dropzoneInstance: null,
         dropzoneModalInstance: null,
         selectedFiles: [],
-        config: config, // Сохраняем конфигурацию
+        config: config,
+
+        // Locale / i18n
+        translations,
+        locale: localStorage.getItem('sfiles_locale') || (window.sfilesDefaultLocale || 'en'),
 
         viewMode: 'grid',
         searchQuery: '',
 
         loading: false,
-        operationLoading: false, // Для операций (delete, rename и т.д.)
+        operationLoading: false,
         lastError: null,
         totalProgress: 0,
         uploadProgress: 0,
         isUploading: false,
 
-        // Пагинация
         pagination: {
             enabled: true,
             currentPage: 1,
@@ -163,6 +168,24 @@ function fileManager() {
         },
 
         // 3) Utils
+        t(key, params = {}) {
+            let s = this.translations?.[this.locale]?.[key] || this.translations?.en?.[key] || key;
+            for (const [k, v] of Object.entries(params)) {
+                s = s.replace(new RegExp('\\{' + k + '\\}', 'g'), String(v));
+            }
+            return s;
+        },
+
+        setLocale(loc) {
+            if (loc !== 'en' && loc !== 'ru') return;
+            this.locale = loc;
+            localStorage.setItem('sfiles_locale', loc);
+            try {
+                document.documentElement.lang = loc;
+                document.title = this.t('title');
+            } catch (e) {}
+        },
+
         csrfToken() {
             return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
         },
@@ -283,9 +306,9 @@ function fileManager() {
             if (!res.ok) {
                 let msg = data?.message || data?.error || `HTTP ${res.status}`;
 
-                // Обработка rate limiting
+                // Rate limiting
                 if (res.status === 429) {
-                    msg = data?.rate_limit || 'Слишком много запросов. Попробуйте позже.';
+                    msg = data?.rate_limit || this.t('rate_limit');
                 }
 
                 throw new Error(msg);
@@ -364,7 +387,7 @@ function fileManager() {
                 this.updateBreadcrumbs();
             } catch (e) {
                 console.error('Error fetching files:', e);
-                this.lastError = e?.message || 'Error fetching files';
+                this.lastError = e?.message || this.t('error_fetching');
                 this.showNotification(this.lastError, 'error');
                 this.directories = [];
                 this.files = [];
@@ -450,11 +473,11 @@ function fileManager() {
 
                 this.newFolder = '';
                 this.clearCache(this.currentPath);
-                this.showNotification('Папка успешно создана', 'success');
+                this.showNotification(this.t('folder_created'), 'success');
                 await this.fetchFiles(this.pagination.currentPage);
             } catch (e) {
-                console.error('Ошибка создания папки:', e);
-                this.showNotification(e?.message || 'Ошибка создания папки', 'error');
+                console.error('Folder create error:', e);
+                this.showNotification(e?.message || this.t('folder_create_error'), 'error');
             } finally {
                 this.operationLoading = false;
             }
@@ -465,7 +488,7 @@ function fileManager() {
             if (!target) return;
 
             const folderName = target.split('/').pop() || target;
-            const confirmed = confirm(`Вы уверены, что хотите удалить папку "${folderName}"?\n\nЭто действие нельзя отменить.`);
+            const confirmed = confirm(this.t('confirm_delete_folder', { name: folderName }));
 
             if (!confirmed) return;
 
@@ -483,11 +506,11 @@ function fileManager() {
 
                 this.contextMenu.show = false;
                 this.clearCache(this.currentPath);
-                this.showNotification('Папка успешно удалена', 'success');
+                this.showNotification(this.t('folder_deleted'), 'success');
                 await this.fetchFiles(this.pagination.currentPage);
             } catch (e) {
-                console.error('Ошибка удаления папки:', e);
-                this.showNotification(e?.message || 'Ошибка удаления папки', 'error');
+                console.error('Folder delete error:', e);
+                this.showNotification(e?.message || this.t('folder_delete_error'), 'error');
             } finally {
                 this.operationLoading = false;
             }
@@ -497,11 +520,11 @@ function fileManager() {
             const target = String(dir || '').trim();
             if (!target) return;
 
-            this.copyToClipboard(target, 'Путь скопирован: ' + target);
+            this.copyToClipboard(target, this.t('path_copied', { path: target }));
         },
 
-        // Универсальная функция копирования с fallback
-        copyToClipboard(text, successMessage = 'Скопировано в буфер обмена') {
+        copyToClipboard(text, successMessage = null) {
+            if (successMessage == null) successMessage = this.t('copied_to_clipboard');
             // Проверяем доступность Clipboard API
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(text)
@@ -534,12 +557,12 @@ function fileManager() {
                 if (successful) {
                     this.showNotification(successMessage, 'success');
                 } else {
-                    this.showNotification('Не удалось скопировать. Попробуйте скопировать вручную.', 'error');
+                    this.showNotification(this.t('copy_failed'), 'error');
                 }
             } catch (err) {
                 document.body.removeChild(textArea);
-                console.error('Ошибка fallback копирования:', err);
-                this.showNotification('Не удалось скопировать. Попробуйте скопировать вручную.', 'error');
+                console.error('Fallback copy error:', err);
+                this.showNotification(this.t('copy_failed'), 'error');
             }
         },
 
@@ -588,7 +611,7 @@ function fileManager() {
         async submitRename() {
             const newName = String(this.renameModal.newName || '').trim();
             if (!newName) {
-                this.showNotification('Имя не может быть пустым', 'error');
+                this.showNotification(this.t('name_required'), 'error');
                 return;
             }
 
@@ -611,11 +634,11 @@ function fileManager() {
                 this.selectedFiles = [];
                 this.renameModal.show = false;
                 this.clearCache(this.currentPath);
-                this.showNotification('Успешно переименовано', 'success');
+                this.showNotification(this.t('renamed_success'), 'success');
                 await this.fetchFiles(this.pagination.currentPage);
             } catch (e) {
-                console.error('Ошибка переименования:', e);
-                this.showNotification(e?.message || 'Ошибка переименования', 'error');
+                console.error('Rename error:', e);
+                this.showNotification(e?.message || this.t('rename_error'), 'error');
             } finally {
                 this.operationLoading = false;
             }
@@ -667,7 +690,7 @@ function fileManager() {
         },
 
         async deleteFile(file) {
-            const confirmed = confirm(`Удалить файл "${file.name}"?\n\nЭто действие нельзя отменить.`);
+            const confirmed = confirm(this.t('confirm_delete_file', { name: file.name }));
             if (!confirmed) return;
 
             this.operationLoading = true;
@@ -683,12 +706,12 @@ function fileManager() {
                 });
 
                 this.clearCache(this.currentPath);
-                this.showNotification('Файл успешно удален', 'success');
+                this.showNotification(this.t('file_deleted'), 'success');
                 await this.fetchFiles(this.pagination.currentPage);
                 this.selectedFiles = this.selectedFiles.filter(p => p !== file.opPath);
             } catch (e) {
-                console.error('Ошибка удаления файла:', e);
-                this.showNotification(e?.message || 'Ошибка удаления файла', 'error');
+                console.error('File delete error:', e);
+                this.showNotification(e?.message || this.t('file_delete_error'), 'error');
             } finally {
                 this.operationLoading = false;
             }
@@ -698,7 +721,7 @@ function fileManager() {
             const count = this.selectedFiles.length;
             if (!count) return;
 
-            const confirmed = confirm(`Удалить ${count} выбранных файл(ов)?\n\nЭто действие нельзя отменить.`);
+            const confirmed = confirm(this.t('confirm_delete_files', { count }));
             if (!confirmed) return;
 
             this.operationLoading = true;
@@ -706,7 +729,7 @@ function fileManager() {
 
             try {
                 await Promise.all(paths.map(path =>
-                    this.apiFetch('/s-files/delete', {
+                    this.apiFetch(this.config.deleteUrl, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -718,11 +741,11 @@ function fileManager() {
 
                 this.selectedFiles = [];
                 this.clearCache(this.currentPath);
-                this.showNotification(`Успешно удалено файлов: ${count}`, 'success');
+                this.showNotification(this.t('files_deleted', { count }), 'success');
                 await this.fetchFiles(this.pagination.currentPage);
             } catch (e) {
-                console.error('Ошибка удаления нескольких файлов:', e);
-                this.showNotification(e?.message || 'Ошибка удаления файлов', 'error');
+                console.error('Delete files error:', e);
+                this.showNotification(e?.message || this.t('files_delete_error'), 'error');
             } finally {
                 this.operationLoading = false;
             }
@@ -761,7 +784,7 @@ function fileManager() {
             if (!file) return;
 
             const url = this.fileHref(file);
-            this.copyToClipboard(url, 'Ссылка скопирована: ' + url);
+            this.copyToClipboard(url, this.t('link_copied', { url }));
         },
 
         passFiles() {
@@ -769,7 +792,7 @@ function fileManager() {
                 window.opener.handleSelectedFiles(this.selectedFiles);
                 window.close();
             } else {
-                this.showNotification('Окно родителя закрыто. Невозможно передать файлы.', 'error');
+                this.showNotification(this.t('parent_closed'), 'error');
             }
         },
 
@@ -830,19 +853,19 @@ function fileManager() {
                             this.dropzoneInstance.addFile(file);
                         }
                     });
-                    this.showNotification(`Начинается загрузка ${files.length} файл(ов)`, 'info');
+                    this.showNotification(this.t('upload_start', { count: files.length }), 'info');
                 } catch (error) {
-                    console.error('Ошибка при добавлении файлов в Dropzone:', error);
-                    this.showNotification('Ошибка при загрузке файлов. Попробуйте использовать кнопку "Загрузить файлы"', 'error');
+                    console.error('Dropzone add files error:', error);
+                    this.showNotification(this.t('upload_error'), 'error');
                 }
             } else {
-                // Если dropzone не инициализирован, показываем ошибку
-                this.showNotification('Ошибка: система загрузки не готова. Попробуйте использовать кнопку "Загрузить файлы"', 'error');
+                this.showNotification(this.t('upload_system_error'), 'error');
             }
         },
 
         // 10) Init
         init() {
+            this.setLocale(this.locale); // apply saved locale to document (title, lang)
             this.fetchFiles(1);
 
             const self = this;
@@ -886,7 +909,7 @@ function fileManager() {
                             },
                             error(err) {
                                 console.error('Compression error:', err);
-                                self.showNotification('Ошибка сжатия изображения', 'warning');
+                                self.showNotification(self.t('image_compress_error'), 'warning');
                                 done(file);
                             }
                         });
@@ -922,13 +945,13 @@ function fileManager() {
                     });
 
                     this.on("success", function (file, response) {
-                        self.showNotification(`Файл "${file.name}" успешно загружен`, 'success');
+                        self.showNotification(self.t('file_uploaded', { name: file.name }), 'success');
                         self.clearCache(self.currentPath);
                         self.fetchFiles(self.pagination.currentPage);
                     });
 
                     this.on("error", function (file, message, xhr) {
-                        let errorMsg = 'Ошибка загрузки файла';
+                        let errorMsg = self.t('upload_error_file');
 
                         if (xhr && xhr.responseText) {
                             try {

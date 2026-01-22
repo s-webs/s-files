@@ -28,9 +28,12 @@ return [
         'middleware' => env('SFILES_AUTH_MIDDLEWARE', 'auth'), // middleware для защиты (если enabled = true)
     ],
 
+    // Default locale for the file manager UI (en, ru)
+    'locale' => env('SFILES_LOCALE', 'en'),
+
     // Assets configuration
     'assets' => [
-        'use_cdn' => env('SFILES_USE_CDN', false), // Использовать CDN для Alpine.js, Dropzone и т.д.
+        'use_cdn' => env('SFILES_USE_CDN', false),
     ],
 
     // Allowed MIME types for upload

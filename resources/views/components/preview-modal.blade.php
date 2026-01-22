@@ -43,7 +43,7 @@
                        download 
                        class="inline-flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200">
                         <i class="ph ph-download text-lg"></i>
-                        <span>Скачать оригинал</span>
+                        <span x-text="t('download_original')"></span>
                     </a>
                 </div>
             </div>
@@ -55,13 +55,13 @@
                 <div class="mb-6">
                     <i class="ph ph-file text-7xl text-gray-300"></i>
                 </div>
-                <p class="text-xl font-semibold text-gray-700 mb-2">Предпросмотр недоступен</p>
-                <p class="text-gray-500 mb-6">Этот тип файла не поддерживает предпросмотр</p>
+                <p class="text-xl font-semibold text-gray-700 mb-2" x-text="t('preview_unavailable')"></p>
+                <p class="text-gray-500 mb-6" x-text="t('preview_unsupported')"></p>
                 <a :href="previewModal.url"
                    download
                    class="inline-flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200">
                     <i class="ph ph-download text-lg"></i>
-                    <span>Скачать файл</span>
+                    <span x-text="t('download_file')"></span>
                 </a>
             </div>
         </template>

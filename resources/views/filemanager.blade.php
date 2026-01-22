@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Файловый менеджер S-Files</title>
+    <title>S-Files File Manager</title>
 
     <!-- Иконки Phosphor -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css">
@@ -95,7 +95,7 @@
                     <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600"></div>
                     <div class="absolute inset-0 animate-ping rounded-full h-12 w-12 border-2 border-blue-400 opacity-20"></div>
                 </div>
-                <span class="text-lg font-semibold text-gray-700">Выполнение операции...</span>
+                <span class="text-lg font-semibold text-gray-700" x-text="t('operation_loading')"></span>
             </div>
         </div>
     </div>
@@ -112,8 +112,8 @@
             <div class="mb-6">
                 <i class="ph ph-cloud-arrow-up text-8xl text-blue-600 drop-shadow-lg"></i>
             </div>
-            <p class="text-3xl font-bold text-blue-800 drop-shadow-md">Перетащите файлы сюда</p>
-            <p class="text-lg text-blue-600 mt-2">Отпустите для начала загрузки</p>
+            <p class="text-3xl font-bold text-blue-800 drop-shadow-md" x-text="t('drag_drop_here')"></p>
+            <p class="text-lg text-blue-600 mt-2" x-text="t('drag_drop_release')"></p>
         </div>
     </div>
 
@@ -124,7 +124,7 @@
         @csrf
     </form>
 
-    {{-- Передаем базовый URL в JavaScript --}}
+    {{-- Base URL and translations for JavaScript --}}
     <script>
         window.sfilesConfig = {
             baseUrl: '{{ route('sfiles.index') }}',
@@ -137,6 +137,8 @@
             downloadFolderUrl: '{{ route('sfiles.index') }}/download-folder',
             downloadFilesUrl: '{{ route('sfiles.index') }}/download-files',
         };
+        window.sfilesTranslations = @json($translations ?? ['en' => [], 'ru' => []]);
+        window.sfilesDefaultLocale = '{{ config("sfiles.locale", "en") }}';
     </script>
 
     <div class="flex h-screen">
@@ -144,9 +146,12 @@
         {{-- Левое меню директорий --}}
         @include('sfiles::components.sidebar')
 
-        {{-- Правая область: хлебные крошки, тулбар, file-list, и т. д. --}}
+        {{-- Right area: breadcrumbs + lang switcher, toolbar, file-list --}}
         <div class="p-6 flex-1 h-screen overflow-hidden flex flex-col relative bg-white/80 backdrop-blur-sm rounded-l-3xl shadow-xl border-l border-gray-200 pb-24">
-            @include('sfiles::components.breadcrumbs')
+            <div class="flex justify-between items-center gap-3 mb-4">
+                <div class="flex-1 min-w-0">@include('sfiles::components.breadcrumbs')</div>
+                @include('sfiles::components.language-switcher')
+            </div>
             @include('sfiles::components.toolbar')
 
             {{--  ЭТОТ include ДОЛЖЕН БЫТЬ ВНУТРИ альпайновского контейнера --}}

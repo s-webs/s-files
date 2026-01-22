@@ -359,7 +359,13 @@ class FileManagerController extends Controller
 
     public function index()
     {
-        return view('sfiles::filemanager');
+        $langPath = __DIR__.'/../../../resources/lang';
+        $translations = [
+            'en' => require $langPath.'/en/sfiles.php',
+            'ru' => require $langPath.'/ru/sfiles.php',
+        ];
+
+        return view('sfiles::filemanager', ['translations' => $translations]);
     }
 
     public function files(Request $request)

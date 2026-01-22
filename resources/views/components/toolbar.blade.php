@@ -4,7 +4,7 @@
         <button @click="openUploadModal()"
                 class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 px-6 py-3 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 flex items-center space-x-2">
             <i class="ph ph-cloud-arrow-up text-xl"></i>
-            <span>Загрузить файлы</span>
+            <span x-text="t('upload_files')"></span>
         </button>
         <div x-show="uploadModal.show"
              x-cloak
@@ -18,7 +18,7 @@
                 <div class="flex items-center justify-between mb-6">
                     <h2 class="text-2xl font-bold text-gray-800 flex items-center space-x-2">
                         <i class="ph ph-cloud-arrow-up text-blue-600"></i>
-                        <span>Загрузите файлы</span>
+                        <span x-text="t('upload_files_modal')"></span>
                     </h2>
                     <button @click="uploadModal.show = false"
                             class="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full p-2 transition-all">
@@ -40,10 +40,10 @@
                         </div>
                     </div>
                     <div class="text-sm text-gray-600 mt-3 flex items-center justify-between">
-                        <span class="font-medium">Загрузка: <span x-text="uploadProgress" class="text-blue-600 font-bold"></span>%</span>
+                        <span class="font-medium"><span x-text="t('upload_progress')"></span>: <span x-text="uploadProgress" class="text-blue-600 font-bold"></span>%</span>
                         <span x-show="isUploading" class="flex items-center text-blue-600">
                             <div class="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent mr-2"></div>
-                            <span class="font-medium">Загрузка...</span>
+                            <span class="font-medium" x-text="t('uploading')"></span>
                         </span>
                     </div>
                 </div>
@@ -58,19 +58,19 @@
                    @change="toggleAllFiles($event.target.checked)"
                    :checked="allFilesSelected"
                    class="form-checkbox mr-3 h-5 w-5">
-            <span>Выбрать все</span>
+            <span x-text="t('select_all')"></span>
         </label>
         <button @click="downloadSelectedFiles()"
                 :disabled="!selectedFiles.length"
                 class="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-500 hover:to-gray-600 disabled:opacity-50 disabled:cursor-not-allowed px-5 py-3 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:transform-none flex items-center space-x-2">
             <i class="ph ph-download text-lg"></i>
-            <span>Скачать (<span x-text="selectedFiles.length"></span>)</span>
+            <span x-text="t('download') + ' (' + selectedFiles.length + ')'"></span>
         </button>
         <button @click="deleteSelectedFiles()"
                 :disabled="!selectedFiles.length"
                 class="bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-400 hover:to-rose-500 disabled:opacity-50 disabled:cursor-not-allowed px-5 py-3 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:transform-none flex items-center space-x-2">
             <i class="ph ph-trash text-lg"></i>
-            <span>Удалить (<span x-text="selectedFiles.length"></span>)</span>
+            <span x-text="t('delete') + ' (' + selectedFiles.length + ')'"></span>
         </button>
     </div>
 </div>
