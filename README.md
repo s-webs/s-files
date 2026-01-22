@@ -1,0 +1,330 @@
+# S-Files - Universal File Manager for Laravel
+
+A modern, universal file manager for Laravel with a beautiful interface, drag & drop support, file preview, and many other features.
+
+> **Note:** For Russian documentation, see [README.ru.md](README.ru.md)
+
+## Features
+
+- 🎨 Modern interface built with Alpine.js and Tailwind CSS
+- 📁 File and folder management
+- 📤 File upload via drag & drop
+- 👁️ Preview for images, PDFs, and documents
+- 🔒 Optional authentication (can be disabled)
+- 🚀 Rate limiting to prevent abuse
+- 🔐 Secure path and file validation
+- 📦 Support for various storage disks
+- 🎯 Fully customizable
+
+## Requirements
+
+- PHP >= 8.2
+- Laravel >= 10.0 or >= 11.0 or >= 12.0
+- Node.js >= 18.0 and npm (for building assets)
+- Vite (for building frontend resources)
+
+## Installation
+
+### Via Composer
+
+```bash
+composer require s-webs/s-files
+```
+
+### Publish Configuration
+
+```bash
+php artisan vendor:publish --tag=sfiles-config
+```
+
+### Publish Views (Optional, for customization)
+
+```bash
+php artisan vendor:publish --tag=sfiles-views
+```
+
+### Publish Assets (Optional, for customization)
+
+```bash
+php artisan vendor:publish --tag=sfiles-assets
+```
+
+### Install npm Dependencies
+
+The package requires the following npm dependencies:
+- `alpinejs` (^3.15.4) - for interface reactivity
+- `dropzone` (^6.0.0-beta.2) - for drag & drop file uploads
+- `compressorjs` (^1.2.1) - for image compression before upload
+
+**Option 1: Install in root project (recommended)**
+
+If you're using the package in your project, install dependencies in the root `package.json`:
+
+```bash
+npm install alpinejs@^3.15.4 dropzone@^6.0.0-beta.2 compressorjs@^1.2.1
+```
+
+**Option 2: Install in package (for development)**
+
+If you're developing the package locally:
+
+```bash
+cd vendor/s-webs/s-files
+npm install
+```
+
+### Configure Vite
+
+To make the package work, you need to configure Vite. Add the package files to `vite.config.js`:
+
+```js
+import { defineConfig } from 'vite';
+import laravel from 'laravel-vite-plugin';
+import tailwindcss from '@tailwindcss/vite';
+
+export default defineConfig({
+    plugins: [
+        laravel({
+            input: [
+                'resources/css/app.css',
+                'resources/js/app.js',
+                // Add these lines for the package to work
+                'packages/s-webs/s-files/resources/css/filemanager.css',
+                'packages/s-webs/s-files/resources/js/filemanager.js',
+            ],
+            refresh: true,
+        }),
+        tailwindcss(),
+    ],
+});
+```
+
+**Note:** If you published assets via `vendor:publish`, use these paths:
+- `resources/css/vendor/sfiles/filemanager.css`
+- `resources/js/vendor/sfiles/filemanager.js`
+
+### Build Assets
+
+After configuring Vite, build the assets:
+
+```bash
+# For development (with hot reload)
+npm run dev
+
+# For production
+npm run build
+```
+
+**Important:** Make sure the Vite dev server is running (`npm run dev`) during development, or build the assets (`npm run build`) for production.
+
+## Configuration
+
+### 1. Configuration File
+
+Open the `config/sfiles.php` file and configure the parameters:
+
+```php
+// Storage disk for files
+'disk' => env('SFILES_DISK', 'uploads'),
+
+// Public directory prefix
+'public_dir' => env('SFILES_PUBLIC_DIR', 'uploads'),
+
+// Route prefix
+'routes' => [
+    'prefix' => env('SFILES_ROUTE_PREFIX', 's-files'),
+    'middleware' => ['web'],
+],
+
+// Authentication (optional)
+'auth' => [
+    'enabled' => env('SFILES_AUTH_ENABLED', false), // false = no authentication
+    'middleware' => env('SFILES_AUTH_MIDDLEWARE', 'auth'),
+],
+```
+
+### 2. Storage Configuration
+
+Make sure the files disk is configured in `config/filesystems.php`:
+
+```php
+'disks' => [
+    'uploads' => [
+        'driver' => 'local',
+        'root' => storage_path('app/uploads'),
+        'url' => env('APP_URL').'/uploads',
+        'visibility' => 'public',
+    ],
+],
+```
+
+And create a symbolic link:
+
+```bash
+php artisan storage:link
+```
+
+### 3. Environment Variables (.env)
+
+```env
+# Storage disk
+SFILES_DISK=uploads
+
+# Public directory
+SFILES_PUBLIC_DIR=uploads
+
+# Route prefix
+SFILES_ROUTE_PREFIX=s-files
+
+# Authentication (true/false)
+SFILES_AUTH_ENABLED=false
+
+# Middleware for authentication (if enabled = true)
+SFILES_AUTH_MIDDLEWARE=auth
+
+# Maximum file size in KB (default 10MB)
+SFILES_MAX_SIZE=10240
+
+# Rate limiting
+SFILES_RATE_LIMIT_UPLOAD=100
+SFILES_RATE_LIMIT_DELETE=30
+SFILES_RATE_LIMIT_GENERAL=60
+```
+
+## Usage
+
+### Basic Usage
+
+After installation, the file manager will be available at:
+
+```
+http://your-app.test/s-files
+```
+
+Or at your configured prefix.
+
+### With Authentication
+
+If you want to protect the file manager with authentication:
+
+1. Set `SFILES_AUTH_ENABLED=true` in `.env`
+2. Configure `SFILES_AUTH_MIDDLEWARE` (e.g., `auth` for standard Laravel authentication)
+
+### Without Authentication
+
+By default, authentication is disabled (`SFILES_AUTH_ENABLED=false`). The file manager will be accessible to everyone.
+
+**⚠️ Warning:** Use without authentication only in secure environments or protect routes at the web server level.
+
+### MoonShine Integration
+
+If you're using MoonShine and want to integrate the file manager:
+
+1. Create a custom middleware for MoonShine authentication
+2. Set `SFILES_AUTH_ENABLED=true`
+3. Configure `SFILES_AUTH_MIDDLEWARE` to your custom middleware
+
+Example middleware:
+
+```php
+<?php
+
+namespace App\Http\Middleware;
+
+use Closure;
+use Illuminate\Http\Request;
+use MoonShine\Laravel\MoonShineAuth;
+
+class MoonShineFileManagerAuth
+{
+    public function handle(Request $request, Closure $next)
+    {
+        if (!MoonShineAuth::getGuard()->check()) {
+            abort(401);
+        }
+        
+        return $next($request);
+    }
+}
+```
+
+Then in `config/sfiles.php`:
+
+```php
+'auth' => [
+    'enabled' => true,
+    'middleware' => \App\Http\Middleware\MoonShineFileManagerAuth::class,
+],
+```
+
+## API Endpoints
+
+All endpoints are available through the prefix specified in the configuration:
+
+- `GET /s-files` - File manager main page
+- `GET /s-files/files?path=` - Get list of files and folders
+- `POST /s-files/upload` - Upload a file
+- `POST /s-files/create-folder` - Create a folder
+- `POST /s-files/delete` - Delete a file
+- `POST /s-files/delete-folder` - Delete a folder
+- `POST /s-files/rename` - Rename a file/folder
+- `GET /s-files/download-folder?path=` - Download folder as ZIP
+- `POST /s-files/download-files` - Download selected files as ZIP
+
+## Security
+
+The package includes multiple security measures:
+
+- ✅ Protection against path traversal attacks
+- ✅ MIME type and file extension validation
+- ✅ File signature verification (for Office documents)
+- ✅ Rate limiting to prevent abuse
+- ✅ File name sanitization
+- ✅ Path depth limitation
+- ✅ Blocking dangerous file extensions
+
+## Customization
+
+### Views
+
+After publishing views (`php artisan vendor:publish --tag=sfiles-views`), you can customize them in `resources/views/vendor/sfiles/`.
+
+### Assets
+
+After publishing assets (`php artisan vendor:publish --tag=sfiles-assets`), you can customize CSS and JavaScript in `resources/css/vendor/sfiles/` and `resources/js/vendor/sfiles/`.
+
+**Important:** After publishing assets, make sure:
+1. npm dependencies are installed (`npm install alpinejs@^3.15.4 dropzone@^6.0.0-beta.2 compressorjs@^1.2.1`)
+2. Files are added to `vite.config.js`:
+   ```js
+   input: [
+       // ... other files
+       'resources/css/vendor/sfiles/filemanager.css',
+       'resources/js/vendor/sfiles/filemanager.js',
+   ]
+   ```
+3. Build is executed (`npm run build`) or dev server is running (`npm run dev`)
+
+### Configuration
+
+All parameters can be configured in `config/sfiles.php`:
+
+- Allowed MIME types
+- Allowed extensions
+- Blocked extensions
+- Maximum file size
+- Rate limiting settings
+- Cache settings
+- Logging settings
+
+## License
+
+MIT License
+
+## Support
+
+If you have questions or issues, please create an issue in the package repository.
+
+## Author
+
+S-WEBS
