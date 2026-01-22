@@ -247,3 +247,7 @@ composer.phar
 
 # Laravel specific test files
 /tests/.phpunit.result.cache
+
+#
+PUBLISHING.md
+PUBLISHING.ru.md
