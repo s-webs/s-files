@@ -75,7 +75,7 @@ npm install
 
 ### Configure Vite
 
-To make the package work, you need to configure Vite. Add the package files to `vite.config.js`:
+The package **CSS is loaded automatically** (standalone, no Vite). You only need to add the **JS** entry to `vite.config.js`:
 
 ```js
 import { defineConfig } from 'vite';
@@ -88,9 +88,8 @@ export default defineConfig({
             input: [
                 'resources/css/app.css',
                 'resources/js/app.js',
-                // Add these lines for the package to work
-                'packages/s-webs/s-files/resources/css/filemanager.css',
-                'packages/s-webs/s-files/resources/js/filemanager.js',
+                // S-Files: add only the JS (CSS is standalone)
+                'vendor/s-webs/s-files/resources/js/filemanager.js',
             ],
             refresh: true,
         }),
@@ -99,9 +98,8 @@ export default defineConfig({
 });
 ```
 
-**Note:** If you published assets via `vendor:publish`, use these paths:
-- `resources/css/vendor/sfiles/filemanager.css`
-- `resources/js/vendor/sfiles/filemanager.js`
+**If you develop the package locally** (e.g. in `packages/s-webs/s-files`), use:
+`packages/s-webs/s-files/resources/js/filemanager.js`
 
 ### Build Assets
 

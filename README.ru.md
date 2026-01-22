@@ -75,7 +75,7 @@ npm install
 
 ### Настройка Vite
 
-Для работы пакета необходимо настроить Vite. Добавьте файлы пакета в `vite.config.js`:
+**CSS подключается автоматически** (standalone, без Vite). В `vite.config.js` нужно добавить только **JS**:
 
 ```js
 import { defineConfig } from 'vite';
@@ -88,9 +88,8 @@ export default defineConfig({
             input: [
                 'resources/css/app.css',
                 'resources/js/app.js',
-                // Добавьте эти строки для работы пакета
-                'packages/s-webs/s-files/resources/css/filemanager.css',
-                'packages/s-webs/s-files/resources/js/filemanager.js',
+                // S-Files: только JS (CSS — standalone)
+                'vendor/s-webs/s-files/resources/js/filemanager.js',
             ],
             refresh: true,
         }),
@@ -99,9 +98,8 @@ export default defineConfig({
 });
 ```
 
-**Примечание:** Если вы опубликовали assets через `vendor:publish`, используйте пути:
-- `resources/css/vendor/sfiles/filemanager.css`
-- `resources/js/vendor/sfiles/filemanager.js`
+**При локальной разработке пакета** (например, в `packages/s-webs/s-files`):  
+`packages/s-webs/s-files/resources/js/filemanager.js`
 
 ### Сборка assets
 

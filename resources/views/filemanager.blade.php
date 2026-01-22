@@ -10,25 +10,9 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/fill/style.css">
 
-    <!-- Ваши стили -->
-    @if(config('sfiles.assets.use_cdn', false))
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@3/dist/tailwind.min.css">
-    @else
-        @php
-            $publishedCss = resource_path('css/vendor/sfiles/filemanager.css');
-            $packageCss = base_path('packages/s-webs/s-files/resources/css/filemanager.css');
-            $usePublished = file_exists($publishedCss);
-            $usePackage = file_exists($packageCss);
-        @endphp
-
-        @if($usePublished)
-            @vite(['resources/css/vendor/sfiles/filemanager.css'])
-        @elseif($usePackage)
-            @vite(['packages/s-webs/s-files/resources/css/filemanager.css'])
-        @else
-            <link rel="stylesheet" href="{{ route('sfiles.index') }}/assets/css/filemanager.css">
-        @endif
-    @endif
+    {{-- Tailwind + S-Files styles (standalone CSS, no Vite required) --}}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@3/dist/tailwind.min.css">
+    <link rel="stylesheet" href="{{ rtrim(route('sfiles.index'), '/') }}/assets/css/filemanager.standalone.css">
 </head>
 <body class="overflow-hidden h-screen w-full bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
 
@@ -166,27 +150,14 @@
     </div>
 </div>
 
-{{-- Скрипт Alpine + ваш скрипт с fileManager() --}}
-@if(config('sfiles.assets.use_cdn', false))
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dropzone@6.x.x/dist/dropzone.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/compressorjs@1.x.x/dist/compressor.min.js"></script>
-@else
-    @php
-        $publishedJs = resource_path('js/vendor/sfiles/filemanager.js');
-        $packageJs = base_path('packages/s-webs/s-files/resources/js/filemanager.js');
-        $usePublished = file_exists($publishedJs);
-        $usePackage = file_exists($packageJs);
-    @endphp
-
-    @if($usePublished)
-        @vite(['resources/js/vendor/sfiles/filemanager.js'])
-    @elseif($usePackage)
-        @vite(['packages/s-webs/s-files/resources/js/filemanager.js'])
-    @else
-        <script type="module" src="{{ route('sfiles.index') }}/assets/js/filemanager.js"></script>
-    @endif
-@endif
+{{-- JS: add to your vite.config.js input: vendor/s-webs/s-files/resources/js/filemanager.js --}}
+@php
+    $packageJs = base_path('packages/s-webs/s-files/resources/js/filemanager.js');
+    $viteJs = file_exists($packageJs)
+        ? 'packages/s-webs/s-files/resources/js/filemanager.js'
+        : 'vendor/s-webs/s-files/resources/js/filemanager.js';
+@endphp
+@vite([$viteJs])
 </body>
 
 </html>
