@@ -1,0 +1,249 @@
+# Laravel Package .gitignore
+
+# Dependencies
+/vendor/
+/node_modules/
+/.pnp
+.pnp.js
+
+# Testing
+/phpunit.xml
+.phpunit.result.cache
+/.phpunit.cache
+/coverage/
+/.phpunit.cache/
+
+# Build files
+/public/build/
+/public/hot
+/public/storage
+/storage/*.key
+/storage/app/*
+!/storage/app/.gitkeep
+/storage/framework/cache/*
+!/storage/framework/cache/.gitkeep
+/storage/framework/sessions/*
+!/storage/framework/sessions/.gitkeep
+/storage/framework/testing/*
+!/storage/framework/testing/.gitkeep
+/storage/framework/views/*
+!/storage/framework/views/.gitkeep
+/storage/logs/*
+!/storage/logs/.gitkeep
+
+# Environment files
+.env
+.env.backup
+.env.production
+.env.local
+.env.*.local
+*.env
+
+# IDE - PhpStorm / IntelliJ IDEA
+/.idea/
+*.iml
+*.iws
+*.ipr
+out/
+.idea_modules/
+
+# IDE - VSCode
+/.vscode/
+*.code-workspace
+
+# IDE - Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# IDE - NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional stylelint cache
+.stylelintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# Next.js build output
+.next
+out
+
+# Nuxt.js build / generate output
+.nuxt
+dist
+
+# Gatsby files
+.cache/
+public
+
+# Vite
+.vite
+dist/
+
+# Rollup
+.rollup.cache
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+
+# Compiled files
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+
+# Archives
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Package lock files (optional - uncomment if you want to ignore them)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# Composer
+composer.lock
+composer.phar
+
+# Laravel specific
+/bootstrap/cache/*
+!/bootstrap/cache/.gitkeep
+/storage/framework/cache/data/*
+!/storage/framework/cache/data/.gitkeep
+
+# Laravel Mix / Vite
+/public/mix-manifest.json
+/public/vite-manifest.json
+/public/build
+
+# Laravel Horizon
+/storage/horizon/
+
+# Laravel Telescope
+/storage/telescope/
+
+# Laravel Debugbar
+/storage/debugbar/
+
+# Laravel Dusk
+/tests/Browser/screenshots
+/tests/Browser/console
+
+# PHP
+*.php~
+*.php.bak
+*.php.swp
+*.php.swo
+
+# PHPUnit
+.phpunit.cache
+
+# PHP CS Fixer
+.php_cs.cache
+.php_cs
+
+# PHPStan
+.phpstan/
+
+# Psalm
+.psalm/
+
+# Rector
+.rector/
+
+# Misc
+*.cache
+*.sass-cache
+*.scssc
+.sass-cache/
+.scssc/
+*.css.map
+*.js.map
+*.sourcemap
+
+# Local development
+/local/
+/local.*
+*.local
+
+# Documentation build
+/docs/_build/
+/docs/.doctrees/
+
+# Backup files
+*.backup
+*.bak
+*.old
+*~
+
+# Test files
+/tests/_output/
+/tests/_support/_generated/
+
+# Laravel specific test files
+/tests/.phpunit.result.cache
