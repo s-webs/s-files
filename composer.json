@@ -32,7 +32,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Swebs\\SFiles\\SFilesServiceProvider"
+                "s-webs\\s-files\\SFilesServiceProvider"
             ]
         }
     },
