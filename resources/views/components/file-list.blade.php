@@ -81,8 +81,9 @@
                     class="relative"
                 >
                     <a :href="fileHref(file)"
-                       target="_blank"
-                       class="block border-2 border-gray-200 bg-white w-[140px] h-[160px] flex flex-col items-center p-3 rounded-2xl hover:shadow-2xl hover:border-blue-400 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1">
+                       @click.prevent="selectFile(file)"
+                       @dblclick.prevent="openFileInNewTab(file)"
+                       class="block border-2 border-gray-200 bg-white w-[140px] h-[160px] flex flex-col items-center p-3 rounded-2xl hover:shadow-2xl hover:border-blue-400 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 cursor-pointer">
                         <template x-if="isImage(file)">
                             <div class="w-full h-[100px] mb-2 rounded-xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
                                 <img :src="fileHref(file)"
@@ -158,8 +159,9 @@
                     {{-- Название и размер --}}
                     <div class="flex-1 overflow-hidden min-w-0">
                         <a :href="fileHref(file)"
-                           target="_blank"
-                           class="text-sm font-semibold text-gray-800 truncate hover:text-blue-600 transition-colors block"
+                           @click.prevent="selectFile(file)"
+                           @dblclick.prevent="openFileInNewTab(file)"
+                           class="text-sm font-semibold text-gray-800 truncate hover:text-blue-600 transition-colors block cursor-pointer"
                            x-text="file.name"></a>
                         <div class="text-xs text-gray-500 mt-1">
                             <span x-text="formatFileSize(file.size)"></span>

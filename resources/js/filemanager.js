@@ -689,6 +689,13 @@ function fileManager() {
             };
         },
 
+        openFileInNewTab(file) {
+            if (!file) return;
+            const url = this.fileHref(file);
+            window.open(url, '_blank');
+            this.fileContextMenu.show = false;
+        },
+
         async deleteFile(file) {
             const confirmed = confirm(this.t('confirm_delete_file', { name: file.name }));
             if (!confirmed) return;
@@ -794,6 +801,100 @@ function fileManager() {
             } else {
                 this.showNotification(this.t('parent_closed'), 'error');
             }
+        },
+
+        /**
+         * Выбор файла при клике (для интеграции)
+         * 
+         * При клике на файл возвращает путь до выбранного файла через один из механизмов:
+         * 1. TinyMCE интеграция: window.opener.tinymceFilePickerCallback(url) - приоритет для TinyMCE
+         * 2. Callback функция window.sfilesOnFileSelect(fileData) - если определена
+         * 3. window.opener.handleFileSelect(fileData) - если открыт в popup
+         * 4. postMessage с типом 'sfiles_file_selected' или 'tinymce-file-selected' - для iframe/popup интеграции
+         * 5. Копирование пути в буфер обмена - если нет других способов
+         */
+        selectFile(file) {
+            if (!file) return;
+
+            const fileData = {
+                path: file.opPath,
+                publicPath: file.publicPath,
+                name: file.name,
+                size: file.size,
+                fullPath: file.publicPath || file.opPath
+            };
+
+            // Получаем публичный URL файла для передачи в TinyMCE
+            const fileUrl = this.fileHref(file);
+
+            // ПРИОРИТЕТ 1: TinyMCE интеграция через window.opener
+            if (window.opener && !window.opener.closed) {
+                // Проверяем наличие TinyMCE callback в родительском окне
+                if (typeof window.opener.tinymceFilePickerCallback === 'function') {
+                    try {
+                        window.opener.tinymceFilePickerCallback(fileUrl, {});
+                        // Закрываем popup после передачи файла
+                        if (window.closeTinyMCEFilePicker && typeof window.closeTinyMCEFilePicker === 'function') {
+                            window.closeTinyMCEFilePicker();
+                        } else {
+                            window.close();
+                        }
+                        return;
+                    } catch (e) {
+                        console.error('Error calling TinyMCE callback:', e);
+                    }
+                }
+            }
+
+            // ПРИОРИТЕТ 2: TinyMCE интеграция через postMessage (для iframe)
+            if (window.parent && window.parent !== window) {
+                // Проверяем, открыт ли файловый менеджер из TinyMCE (через iframe)
+                try {
+                    window.parent.postMessage({
+                        type: 'tinymce-file-selected',
+                        url: fileUrl,
+                        meta: {}
+                    }, '*');
+                    return;
+                } catch (e) {
+                    console.error('Error sending postMessage to parent:', e);
+                }
+            }
+
+            // ПРИОРИТЕТ 3: Проверяем наличие callback функции
+            if (typeof window.sfilesOnFileSelect === 'function') {
+                window.sfilesOnFileSelect(fileData);
+                return;
+            }
+
+            // ПРИОРИТЕТ 4: Если открыт в popup - передаем через window.opener
+            if (window.opener && !window.opener.closed) {
+                // Проверяем наличие функции обработки в родительском окне
+                if (typeof window.opener.handleFileSelect === 'function') {
+                    window.opener.handleFileSelect(fileData);
+                    window.close();
+                    return;
+                }
+                // Fallback: используем postMessage
+                window.opener.postMessage({
+                    type: 'sfiles_file_selected',
+                    data: fileData
+                }, '*');
+                window.close();
+                return;
+            }
+
+            // ПРИОРИТЕТ 5: Используем postMessage для связи с родительским окном (iframe/popup)
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'sfiles_file_selected',
+                    data: fileData
+                }, '*');
+                return;
+            }
+
+            // Если нет способа передачи - копируем путь в буфер обмена
+            this.copyToClipboard(fileData.publicPath || fileData.path, this.t('path_copied', { path: fileData.publicPath || fileData.path }));
         },
 
         // 7) Selection
