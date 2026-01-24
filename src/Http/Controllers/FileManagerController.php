@@ -368,6 +368,17 @@ class FileManagerController extends Controller
         return view('sfiles::filemanager', ['translations' => $translations]);
     }
 
+    public function tinymce()
+    {
+        $langPath = __DIR__.'/../../../resources/lang';
+        $translations = [
+            'en' => require $langPath.'/en/sfiles.php',
+            'ru' => require $langPath.'/ru/sfiles.php',
+        ];
+
+        return view('sfiles::tinymce', ['translations' => $translations]);
+    }
+
     public function files(Request $request)
     {
         // Получаем относительный путь от клиента (относительно uploads)

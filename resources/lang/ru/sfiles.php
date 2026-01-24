@@ -73,4 +73,9 @@ return [
     'file_uploaded' => 'Файл "{name}" успешно загружен',
     'upload_error_file' => 'Ошибка загрузки файла',
     'image_compress_error' => 'Ошибка сжатия изображения',
+    
+    // TinyMCE integration
+    'select_file' => 'Выбрать файл',
+    'select' => 'Выбрать',
+    'select_file_first' => 'Пожалуйста, сначала выберите файл',
 ];

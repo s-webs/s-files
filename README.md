@@ -268,6 +268,36 @@ All endpoints are available through the prefix specified in the configuration:
 - `POST /s-files/rename` - Rename a file/folder
 - `GET /s-files/download-folder?path=` - Download folder as ZIP
 - `POST /s-files/download-files` - Download selected files as ZIP
+- `GET /s-files/tinymce` - TinyMCE file picker interface
+
+## TinyMCE Integration
+
+S-Files includes built-in integration with TinyMCE editor. See [TINYMCE.md](TINYMCE.md) for detailed documentation.
+
+### Quick Start
+
+1. Include the integration script:
+
+```html
+<script src="{{ route('sfiles.index') }}/assets/js/tinymce-integration.js"></script>
+```
+
+2. Configure TinyMCE:
+
+```javascript
+tinymce.init({
+    selector: '#mytextarea',
+    plugins: 'image link',
+    toolbar: 'image link',
+    
+    file_picker_callback: sfilesTinyMCEPicker({
+        baseUrl: '/s-files',
+        type: 'image'  // or 'file', 'media'
+    })
+});
+```
+
+For more details and examples, see [TINYMCE.md](TINYMCE.md).
 
 ## Security
 

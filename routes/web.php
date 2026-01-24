@@ -14,6 +14,7 @@ Route::group([
     'middleware' => $middleware,
 ], function () {
     Route::get('/', [FileManagerController::class, 'index'])->name('sfiles.index');
+    Route::get('/tinymce', [FileManagerController::class, 'tinymce'])->name('sfiles.tinymce');
     Route::get('/files', [FileManagerController::class, 'files'])->middleware('sfiles.ratelimit:general');
     Route::post('/upload', [FileManagerController::class, 'upload'])->middleware('sfiles.ratelimit:upload');
     Route::post('/create-folder', [FileManagerController::class, 'createFolder'])->middleware('sfiles.ratelimit:general');

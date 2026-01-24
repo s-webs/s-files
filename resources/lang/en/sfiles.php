@@ -73,4 +73,9 @@ return [
     'file_uploaded' => 'File "{name}" uploaded successfully',
     'upload_error_file' => 'Upload error',
     'image_compress_error' => 'Image compression error',
+    
+    // TinyMCE integration
+    'select_file' => 'Select File',
+    'select' => 'Select',
+    'select_file_first' => 'Please select a file first',
 ];
