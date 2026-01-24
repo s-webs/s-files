@@ -1,8 +1,8 @@
-import { Component } from './core/Component.js';
-import { StateManager } from './core/StateManager.js';
-import { ApiService } from './core/ApiService.js';
-import { I18n } from './core/I18n.js';
-import { Utils } from './core/Utils.js';
+import { Component } from '../core/Component.js';
+import { StateManager } from '../core/StateManager.js';
+import { ApiService } from '../core/ApiService.js';
+import { I18n } from '../core/I18n.js';
+import { Utils } from '../core/Utils.js';
 
 /**
  * Главный компонент файлового менеджера

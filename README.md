@@ -95,6 +95,10 @@ export default defineConfig({
         }),
         tailwindcss(),
     ],
+    resolve: {
+        // Ensure Vite can resolve relative imports in vendor packages
+        preserveSymlinks: false,
+    },
 });
 ```
 

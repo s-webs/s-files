@@ -95,6 +95,10 @@ export default defineConfig({
         }),
         tailwindcss(),
     ],
+    resolve: {
+        // Обеспечивает правильное разрешение относительных импортов в пакетах vendor
+        preserveSymlinks: false,
+    },
 });
 ```
 
