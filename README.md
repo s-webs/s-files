@@ -272,32 +272,54 @@ All endpoints are available through the prefix specified in the configuration:
 
 ## TinyMCE Integration
 
-S-Files includes built-in integration with TinyMCE editor. See [TINYMCE.md](TINYMCE.md) for detailed documentation.
+S-Files includes built-in integration with TinyMCE editor. You can configure it **directly in your config file** without using Blade templates.
 
 ### Quick Start
 
-1. Include the integration script:
+1. Include the integration scripts in your HTML (in correct order):
 
 ```html
+<!-- 1. TinyMCE -->
+<script src="https://cdn.tiny.cloud/1/YOUR_API_KEY/tinymce/6/tinymce.min.js"></script>
+
+<!-- 2. S-Files integration -->
 <script src="{{ route('sfiles.index') }}/assets/js/tinymce-integration.js"></script>
+
+<!-- 3. Auto-integration (processes config) -->
+<script src="{{ route('sfiles.index') }}/assets/js/tinymce-auto-integration.js"></script>
 ```
 
-2. Configure TinyMCE:
+2. Configure TinyMCE in `config/tinymce.php`:
+
+```php
+return [
+    // ... other config ...
+    
+    'sfiles' => [
+        'base_url' => env('SFILES_ROUTE_PREFIX', '/s-files'),
+        'width' => 900,
+        'height' => 600,
+    ],
+    
+    'callbacks' => [
+        'file_picker_callback' => 'sfiles', // Auto-integration
+    ],
+];
+```
+
+3. Initialize TinyMCE:
 
 ```javascript
-tinymce.init({
-    selector: '#mytextarea',
-    plugins: 'image link',
-    toolbar: 'image link',
-    
-    file_picker_callback: sfilesTinyMCEPicker({
-        baseUrl: '/s-files',
-        type: 'image'  // or 'file', 'media'
-    })
-});
+const config = @json(config('tinymce'));
+tinymce.init(config);
 ```
 
-For more details and examples, see [TINYMCE.md](TINYMCE.md).
+The `tinymce-auto-integration.js` script will automatically process the configuration and connect the integration.
+
+**For detailed documentation, see:**
+- [TINYMCE.md](TINYMCE.md) - Full integration guide
+- [TINYMCE-CONFIG.md](TINYMCE-CONFIG.md) - Configuration-only integration guide
+- [examples/tinymce-config.php](examples/tinymce-config.php) - Example config file
 
 ## Security
 
