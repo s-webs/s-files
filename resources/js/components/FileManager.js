@@ -245,6 +245,9 @@ export class FileManager extends Component {
             }
 
             this.updateBreadcrumbs();
+            
+            // Эмитим событие для обновления UI
+            this.stateManager.emit('filesLoaded', { files, directories, pagination });
         } catch (error) {
             console.error('Error fetching files:', error);
             const errorMessage = error?.message || this.i18n.t('error_fetching');
@@ -624,11 +627,10 @@ export class FileManager extends Component {
     getFilteredFiles() {
         const files = this.stateManager.get('files');
         const searchQuery = this.stateManager.get('searchQuery');
-        const pagination = this.stateManager.get('pagination');
 
         let filtered = files;
 
-        // Фильтрация по поисковому запросу
+        // Фильтрация по поисковому запросу (только на клиенте)
         if (searchQuery.trim()) {
             const q = searchQuery.trim().toLowerCase();
             filtered = filtered.filter(file =>
@@ -636,13 +638,7 @@ export class FileManager extends Component {
             );
         }
 
-        // Пагинация
-        if (pagination.enabled) {
-            const start = (pagination.currentPage - 1) * pagination.perPage;
-            const end = start + pagination.perPage;
-            filtered = filtered.slice(start, end);
-        }
-
+        // Пагинация происходит на сервере, поэтому возвращаем все отфильтрованные файлы
         return filtered;
     }
 

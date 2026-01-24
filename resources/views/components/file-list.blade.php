@@ -1,37 +1,3 @@
-<div class="overflow-auto flex-1 my-8 pb-8 relative">
-    {{-- Индикатор загрузки при переходе по директориям --}}
-    <div x-show="loading"
-         x-cloak
-         x-transition:enter="transition ease-out duration-200"
-         x-transition:enter-start="opacity-0"
-         x-transition:enter-end="opacity-100"
-         x-transition:leave="transition ease-in duration-200"
-         x-transition:leave-start="opacity-100"
-         x-transition:leave-end="opacity-0"
-         class="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center rounded-xl"
-         style="display: none;">
-        <div class="flex flex-col items-center space-y-4">
-            <div class="relative">
-                <div class="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600"></div>
-                <div class="absolute inset-0 animate-ping rounded-full h-16 w-16 border-2 border-blue-400 opacity-20"></div>
-            </div>
-            <p class="text-lg font-semibold text-gray-700" x-text="t('loading_files')"></p>
-        </div>
-    </div>
-
-    {{-- Search --}}
-    <div class="mb-6">
-        <div class="relative">
-            <i class="ph ph-magnifying-glass absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl"></i>
-            <input
-                type="text"
-                x-model="searchQuery"
-                :placeholder="t('search_placeholder')"
-                class="w-full border-2 border-gray-200 rounded-xl px-12 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-200"
-            >
-        </div>
-    </div>
-
 <div data-file-list class="overflow-auto flex-1 my-8 pb-8 relative">
     {{-- Индикатор загрузки --}}
     <div data-file-list-loading

@@ -147,9 +147,6 @@ class TemplateAdapter {
         // Обновление drag & drop зоны
         this.updateDragOver(state.dragOver);
 
-        // Обновление списка файлов
-        this.updateFileList(state);
-
         // Обновление breadcrumbs
         this.updateBreadcrumbs(state.breadcrumbs);
 
@@ -158,6 +155,21 @@ class TemplateAdapter {
 
         // Обновление счетчиков выбранных файлов
         this.updateSelectedCount(state.selectedFiles, state.files);
+
+        // Обновление переключателя вида
+        this.updateViewToggle(state.viewMode);
+    }
+
+    updateViewToggle(viewMode) {
+        const root = this.fileManager.element;
+        root.querySelectorAll('[data-view-toggle]').forEach(btn => {
+            const mode = btn.getAttribute('data-view-toggle');
+            if (mode === viewMode) {
+                btn.className = 'px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-2 font-medium bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg';
+            } else {
+                btn.className = 'px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-2 font-medium bg-white text-gray-600 hover:bg-gray-100';
+            }
+        });
     }
 
     updateNotification(notification) {
@@ -166,9 +178,43 @@ class TemplateAdapter {
 
         if (notification.show) {
             notificationEl.classList.remove('hidden');
-            notificationEl.querySelector('[data-notification-message]').textContent = notification.message;
-            notificationEl.className = `fixed top-4 right-4 z-[200] max-w-md ${this.getNotificationClasses(notification.type)}`;
+            notificationEl.style.display = 'flex';
+            
+            const messageEl = notificationEl.querySelector('[data-notification-message]');
+            if (messageEl) {
+                messageEl.textContent = notification.message;
+            }
+
+            const iconEl = notificationEl.querySelector('[data-notification-icon]');
+            if (iconEl) {
+                const icons = {
+                    success: 'ph ph-check-circle',
+                    error: 'ph ph-x-circle',
+                    warning: 'ph ph-warning',
+                    info: 'ph ph-info'
+                };
+                iconEl.className = `text-xl ${icons[notification.type] || icons.info}`;
+            }
+
+            // Обновляем классы для типа уведомления
+            const container = notificationEl.querySelector('div');
+            if (container) {
+                container.className = `p-4 rounded-xl shadow-2xl backdrop-blur-sm border ${this.getNotificationClasses(notification.type)}`;
+            }
+
+            // Кнопка закрытия
+            const closeBtn = notificationEl.querySelector('[data-notification-close]');
+            if (closeBtn) {
+                closeBtn.onclick = () => {
+                    this.fileManager.stateManager.set('notification', {
+                        show: false,
+                        message: '',
+                        type: 'info'
+                    });
+                };
+            }
         } else {
+            notificationEl.style.display = 'none';
             notificationEl.classList.add('hidden');
         }
     }
@@ -289,8 +335,16 @@ export function initFileManager() {
     
     // Инициализация компонентов
     const fileListEl = rootElement.querySelector('[data-file-list]');
+    let fileList = null;
     if (fileListEl) {
-        new FileList(fileListEl, fileManager);
+        fileList = new FileList(fileListEl, fileManager);
+        // Подписываемся на изменения файлов для обновления списка
+        fileManager.stateManager.on('change:files', () => {
+            if (fileList) fileList.render();
+        });
+        fileManager.stateManager.on('filesLoaded', () => {
+            if (fileList) fileList.render();
+        });
     }
 
     const previewModalEl = rootElement.querySelector('[data-preview-modal]');
@@ -319,8 +373,10 @@ export function initFileManager() {
     // Инициализация Dropzone
     initDropzone(fileManager);
 
-    // Загрузка файлов
-    fileManager.fetchFiles(1);
+    // Загрузка файлов после небольшой задержки для инициализации компонентов
+    setTimeout(() => {
+        fileManager.fetchFiles(1);
+    }, 200);
 
     // Экспортируем в window для глобального доступа
     window.sfilesManager = fileManager;

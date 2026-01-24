@@ -8,9 +8,91 @@ export class FileList extends Component {
         super(element);
         this.fileManager = fileManager;
         this.setupStateListener();
+        this.setupEventListeners();
+        // Первоначальный рендер после небольшой задержки для инициализации
+        this.render();
+    }
+
+    updatePagination() {
+        const pagination = this.fileManager.get('pagination');
+        const paginationEl = this.query('[data-pagination]');
+        if (!paginationEl) return;
+
+        if (!pagination.enabled || pagination.totalPages <= 1) {
+            paginationEl.style.display = 'none';
+            return;
+        }
+
+        paginationEl.style.display = 'flex';
+
+        const currentPage = pagination.currentPage;
+        const totalPages = pagination.totalPages;
+        const total = pagination.total;
+
+        // Генерируем кнопки пагинации
+        const pages = [];
+        const start = Math.max(1, currentPage - 2);
+        const end = Math.min(totalPages, start + 4);
+
+        for (let i = start; i <= end; i++) {
+            pages.push(i);
+        }
+
+        paginationEl.innerHTML = `
+            <button data-pagination-prev
+                    ${currentPage === 1 ? 'disabled' : ''}
+                    class="px-4 py-2 border-2 border-gray-200 rounded-lg transition-all duration-200 font-medium ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-50 hover:text-blue-600'}">
+                <i class="ph ph-caret-left"></i>
+            </button>
+            ${pages.map(page => `
+                <button data-pagination-page="${page}"
+                        class="px-4 py-2 rounded-lg min-w-[44px] font-semibold transition-all duration-200 ${page === currentPage 
+                            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg' 
+                            : 'bg-white hover:bg-blue-50 border-2 border-gray-200 hover:border-blue-400'}">
+                    ${page}
+                </button>
+            `).join('')}
+            <button data-pagination-next
+                    ${currentPage === totalPages ? 'disabled' : ''}
+                    class="px-4 py-2 border-2 border-gray-200 rounded-lg transition-all duration-200 font-medium ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-50 hover:text-blue-600'}">
+                <i class="ph ph-caret-right"></i>
+            </button>
+            <span class="text-sm text-gray-600 ml-6 font-medium">
+                ${this.fileManager.t('page')} <span class="font-bold text-blue-600">${currentPage}</span> ${this.fileManager.t('of')} <span class="font-bold">${totalPages}</span>
+                <span class="text-gray-400 mx-2">•</span>
+                <span class="font-bold">${total}</span> ${this.fileManager.t('files_count')}
+            </span>
+        `;
+
+        // Привязка событий
+        const prevBtn = paginationEl.querySelector('[data-pagination-prev]');
+        if (prevBtn) {
+            prevBtn.addEventListener('click', () => {
+                if (currentPage > 1) {
+                    this.fileManager.goToPage(currentPage - 1);
+                }
+            });
+        }
+
+        const nextBtn = paginationEl.querySelector('[data-pagination-next]');
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => {
+                if (currentPage < totalPages) {
+                    this.fileManager.goToPage(currentPage + 1);
+                }
+            });
+        }
+
+        paginationEl.querySelectorAll('[data-pagination-page]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const page = parseInt(btn.getAttribute('data-pagination-page'));
+                this.fileManager.goToPage(page);
+            });
+        });
     }
 
     setupStateListener() {
+        // Подписка на изменения файлов и состояния
         this.fileManager.stateManager.on('change:files', () => {
             this.render();
         });
@@ -22,6 +104,18 @@ export class FileList extends Component {
         });
         this.fileManager.stateManager.on('change:selectedFiles', () => {
             this.updateSelection();
+        });
+        this.fileManager.stateManager.on('change:loading', () => {
+            const loading = this.fileManager.get('loading');
+            if (loading) {
+                this.showLoading();
+            } else {
+                this.hideLoading();
+                this.render();
+            }
+        });
+        this.fileManager.stateManager.on('change:pagination', () => {
+            this.updatePagination();
         });
     }
 
@@ -81,11 +175,27 @@ export class FileList extends Component {
 
         this.hideLoading();
 
+        // Показываем/скрываем контейнеры в зависимости от режима
+        const gridContainer = this.query('[data-file-list-grid]');
+        const listContainer = this.query('[data-file-list-list]');
+        
+        if (!gridContainer || !listContainer) {
+            console.warn('FileList containers not found');
+            return;
+        }
+        
         if (viewMode === 'grid') {
+            gridContainer.style.display = 'flex';
+            listContainer.style.display = 'none';
             this.renderGrid(files, selectedFiles);
         } else {
+            gridContainer.style.display = 'none';
+            listContainer.style.display = 'block';
             this.renderList(files, selectedFiles);
         }
+
+        // Обновляем пагинацию
+        this.updatePagination();
     }
 
     renderGrid(files, selectedFiles) {
