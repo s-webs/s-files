@@ -1,1096 +1,511 @@
-import Alpine from 'alpinejs';
+import { FileManager } from './components/FileManager.js';
+import { PreviewModal } from './components/PreviewModal.js';
+import { RenameModal } from './components/RenameModal.js';
+import { FileContextMenu } from './components/FileContextMenu.js';
+import { FolderContextMenu } from './components/FolderContextMenu.js';
+import { FileList } from './components/FileList.js';
 import Dropzone from 'dropzone';
 import 'dropzone/dist/dropzone.css';
 import Compressor from 'compressorjs';
 
-window.Alpine = Alpine;
+/**
+ * Адаптер для связи новой архитектуры с существующими Blade шаблонами
+ */
+class TemplateAdapter {
+    constructor(fileManager) {
+        this.fileManager = fileManager;
+        this.setupBindings();
+    }
 
-function fileManager() {
-    // Получаем конфигурацию из window (устанавливается в blade шаблоне)
-    const config = window.sfilesConfig || {
-        baseUrl: '/s-files',
-        uploadUrl: '/s-files/upload',
-        filesUrl: '/s-files/files',
-        createFolderUrl: '/s-files/create-folder',
-        deleteUrl: '/s-files/delete',
-        deleteFolderUrl: '/s-files/delete-folder',
-        renameUrl: '/s-files/rename',
-        downloadFolderUrl: '/s-files/download-folder',
-        downloadFilesUrl: '/s-files/download-files',
-    };
+    setupBindings() {
+        // Подписка на изменения состояния для обновления UI
+        this.fileManager.stateManager.on('change', () => {
+            this.updateUI();
+        });
 
-    const translations = window.sfilesTranslations || { en: {}, ru: {} };
+        // Привязка событий к элементам
+        this.bindEvents();
+    }
 
-    return {
-        // 1) State
-        currentPath: '',
-        directories: [],
-        files: [],
-        allFiles: [],
-        newFolder: '',
-        breadcrumbs: [],
-        dropzoneInstance: null,
-        dropzoneModalInstance: null,
-        selectedFiles: [],
-        config: config,
+    bindEvents() {
+        const root = this.fileManager.element;
 
-        // Locale / i18n
-        translations,
-        locale: localStorage.getItem('sfiles_locale') || (window.sfilesDefaultLocale || 'en'),
-
-        viewMode: 'grid',
-        searchQuery: '',
-
-        loading: false,
-        operationLoading: false,
-        lastError: null,
-        totalProgress: 0,
-        uploadProgress: 0,
-        isUploading: false,
-
-        pagination: {
-            enabled: true,
-            currentPage: 1,
-            perPage: 50,
-            total: 0,
-            totalPages: 1,
-        },
-
-        // Кэш
-        cache: new Map(),
-        cacheEnabled: true,
-
-        // Уведомления
-        notification: {
-            show: false,
-            message: '',
-            type: 'info', // info, success, error, warning
-        },
-
-        // Drag & Drop
-        dragOver: false,
-        draggedFiles: [],
-
-        contextMenu: {
-            show: false,
-            x: 0,
-            y: 0,
-            dir: ''
-        },
-
-        fileContextMenu: {
-            show: false,
-            x: 0,
-            y: 0,
-            file: null
-        },
-
-        previewModal: {
-            show: false,
-            url: '',
-            type: ''
-        },
-
-        renameModal: {
-            show: false,
-            type: 'file',
-            path: '',
-            displayName: '',
-            newName: ''
-        },
-
-        uploadModal: {
-            show: false
-        },
-
-        openUploadModal() {
-            this.uploadModal.show = true;
-            // Инициализируем dropzone на модальном окне после его открытия
-            setTimeout(() => {
-                const uploadZoneModal = document.getElementById("uploadZoneModal");
-                if (uploadZoneModal && !this.dropzoneModalInstance) {
-                    this.dropzoneModalInstance = this.createDropzone(uploadZoneModal, true);
-                }
-            }, 100);
-        },
-
-        // 2) Computed
-        get filteredFiles() {
-            if (!this.searchQuery.trim()) {
-                return this.paginatedFiles;
-            }
-            const q = this.searchQuery.trim().toLowerCase();
-            return this.paginatedFiles.filter(file =>
-                file.name.toLowerCase().includes(q) ||
-                (file.name && file.name.toLowerCase().includes(q))
-            );
-        },
-
-        get paginatedFiles() {
-            if (!this.pagination.enabled) {
-                return this.files;
-            }
-
-            const start = (this.pagination.currentPage - 1) * this.pagination.perPage;
-            const end = start + this.pagination.perPage;
-            return this.files.slice(start, end);
-        },
-
-        get filteredDirectories() {
-            if (!this.searchQuery.trim()) return this.directories;
-            const q = this.searchQuery.trim().toLowerCase();
-            return this.directories.filter(dir => {
-                const name = dir.split('/').pop().toLowerCase();
-                return name.includes(q);
+        // Поиск
+        const searchInput = root.querySelector('[data-search]');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                this.fileManager.stateManager.set('searchQuery', e.target.value);
             });
-        },
+        }
 
-        get allFilesSelected() {
-            return this.filteredFiles.length > 0 && this.selectedFiles.length === this.filteredFiles.length;
-        },
+        // Переключение вида
+        root.querySelectorAll('[data-view-toggle]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const mode = btn.getAttribute('data-view-toggle');
+                this.fileManager.toggleView(mode);
+            });
+        });
 
-        get selectedFilesCount() {
-            return this.selectedFiles.length;
-        },
+        // Создание папки
+        const newFolderInput = root.querySelector('[data-new-folder-input]');
+        const newFolderBtn = root.querySelector('[data-new-folder-btn]');
+        if (newFolderInput && newFolderBtn) {
+            newFolderBtn.addEventListener('click', () => {
+                const name = newFolderInput.value;
+                this.fileManager.createFolder(name);
+                newFolderInput.value = '';
+            });
+            newFolderInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    newFolderBtn.click();
+                }
+            });
+        }
 
-        get selectedFilesSize() {
-            return this.files
-                .filter(file => this.selectedFiles.includes(file.opPath))
+        // Выбор всех файлов
+        const selectAllCheckbox = root.querySelector('[data-select-all]');
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', (e) => {
+                this.fileManager.toggleAllFiles(e.target.checked);
+            });
+        }
+
+        // Удаление выбранных файлов
+        const deleteSelectedBtn = root.querySelector('[data-delete-selected]');
+        if (deleteSelectedBtn) {
+            deleteSelectedBtn.addEventListener('click', () => {
+                this.fileManager.deleteSelectedFiles();
+            });
+        }
+
+        // Скачивание выбранных файлов
+        const downloadSelectedBtn = root.querySelector('[data-download-selected]');
+        if (downloadSelectedBtn) {
+            downloadSelectedBtn.addEventListener('click', () => {
+                this.fileManager.downloadSelectedFiles();
+            });
+        }
+
+        // Назад
+        const backBtn = root.querySelector('[data-back]');
+        if (backBtn) {
+            backBtn.addEventListener('click', () => {
+                this.fileManager.goUp();
+            });
+        }
+
+        // Breadcrumbs
+        root.querySelectorAll('[data-breadcrumb]').forEach((el, index) => {
+            el.addEventListener('click', () => {
+                this.fileManager.goToBreadcrumb(index);
+            });
+        });
+
+        // Файлы и папки
+        root.querySelectorAll('[data-file]').forEach(el => {
+            el.addEventListener('click', (e) => {
+                e.preventDefault();
+                const fileData = JSON.parse(el.getAttribute('data-file'));
+                this.fileManager.selectFile(fileData);
+            });
+            el.addEventListener('dblclick', (e) => {
+                e.preventDefault();
+                const fileData = JSON.parse(el.getAttribute('data-file'));
+                this.fileManager.openFileInNewTab(fileData);
+            });
+            el.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                const fileData = JSON.parse(el.getAttribute('data-file'));
+                this.openFileContextMenu(fileData, e);
+            });
+        });
+
+        root.querySelectorAll('[data-folder]').forEach(el => {
+            el.addEventListener('click', (e) => {
+                e.preventDefault();
+                const dir = el.getAttribute('data-folder');
+                this.fileManager.openDirectory(dir);
+            });
+            el.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                const dir = el.getAttribute('data-folder');
+                this.openFolderContextMenu(dir, e);
+            });
+        });
+    }
+
+    updateUI() {
+        const state = this.fileManager.getState();
+        const root = this.fileManager.element;
+
+        // Обновление уведомлений
+        this.updateNotification(state.notification);
+
+        // Обновление индикатора загрузки
+        this.updateLoading(state.loading, state.operationLoading);
+
+        // Обновление drag & drop зоны
+        this.updateDragOver(state.dragOver);
+
+        // Обновление breadcrumbs
+        this.updateBreadcrumbs(state.breadcrumbs);
+
+        // Обновление пагинации
+        this.updatePagination(state.pagination);
+
+        // Обновление счетчиков выбранных файлов
+        this.updateSelectedCount(state.selectedFiles, state.files);
+
+        // Обновление переключателя вида
+        this.updateViewToggle(state.viewMode);
+    }
+
+    updateViewToggle(viewMode) {
+        const root = this.fileManager.element;
+        root.querySelectorAll('[data-view-toggle]').forEach(btn => {
+            const mode = btn.getAttribute('data-view-toggle');
+            if (mode === viewMode) {
+                btn.className = 'px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-2 font-medium bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg';
+            } else {
+                btn.className = 'px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-2 font-medium bg-white text-gray-600 hover:bg-gray-100';
+            }
+        });
+    }
+
+    updateNotification(notification) {
+        const notificationEl = this.fileManager.element.querySelector('[data-notification]');
+        if (!notificationEl) return;
+
+        if (notification.show) {
+            notificationEl.classList.remove('hidden');
+            notificationEl.style.display = 'flex';
+            
+            const messageEl = notificationEl.querySelector('[data-notification-message]');
+            if (messageEl) {
+                messageEl.textContent = notification.message;
+            }
+
+            const iconEl = notificationEl.querySelector('[data-notification-icon]');
+            if (iconEl) {
+                const icons = {
+                    success: 'ph ph-check-circle',
+                    error: 'ph ph-x-circle',
+                    warning: 'ph ph-warning',
+                    info: 'ph ph-info'
+                };
+                iconEl.className = `text-xl ${icons[notification.type] || icons.info}`;
+            }
+
+            // Обновляем классы для типа уведомления
+            const container = notificationEl.querySelector('div');
+            if (container) {
+                container.className = `p-4 rounded-xl shadow-2xl backdrop-blur-sm border ${this.getNotificationClasses(notification.type)}`;
+            }
+
+            // Кнопка закрытия
+            const closeBtn = notificationEl.querySelector('[data-notification-close]');
+            if (closeBtn) {
+                closeBtn.onclick = () => {
+                    this.fileManager.stateManager.set('notification', {
+                        show: false,
+                        message: '',
+                        type: 'info'
+                    });
+                };
+            }
+        } else {
+            notificationEl.style.display = 'none';
+            notificationEl.classList.add('hidden');
+        }
+    }
+
+    getNotificationClasses(type) {
+        const classes = {
+            success: 'bg-gradient-to-r from-green-500 to-emerald-600 text-white border-green-400',
+            error: 'bg-gradient-to-r from-red-500 to-rose-600 text-white border-red-400',
+            warning: 'bg-gradient-to-r from-yellow-500 to-amber-600 text-white border-yellow-400',
+            info: 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-blue-400'
+        };
+        return classes[type] || classes.info;
+    }
+
+    updateLoading(loading, operationLoading) {
+        const loadingEl = this.fileManager.element.querySelector('[data-loading]');
+        if (loadingEl) {
+            loadingEl.style.display = loading ? 'flex' : 'none';
+        }
+
+        const operationLoadingEl = this.fileManager.element.querySelector('[data-operation-loading]');
+        if (operationLoadingEl) {
+            operationLoadingEl.style.display = operationLoading ? 'flex' : 'none';
+        }
+    }
+
+    updateDragOver(dragOver) {
+        const dragOverEl = this.fileManager.element.querySelector('[data-drag-over]');
+        if (dragOverEl) {
+            dragOverEl.style.display = dragOver ? 'flex' : 'none';
+        }
+    }
+
+    updateFileList(state) {
+        // Обновление списка файлов будет происходить через рендеринг компонентов
+        // Здесь можно добавить логику для обновления существующих элементов
+    }
+
+    updateBreadcrumbs(breadcrumbs) {
+        const breadcrumbsEl = this.fileManager.element.querySelector('[data-breadcrumbs]');
+        if (!breadcrumbsEl) return;
+
+        breadcrumbsEl.innerHTML = breadcrumbs.map((crumb, index) => {
+            const name = index === 0 ? '🏠' : crumb;
+            return `<span data-breadcrumb="${index}" class="cursor-pointer hover:text-blue-600">${name}</span>`;
+        }).join(' > ');
+    }
+
+    updatePagination(pagination) {
+        const paginationEl = this.fileManager.element.querySelector('[data-pagination]');
+        if (!paginationEl || !pagination.enabled || pagination.totalPages <= 1) {
+            if (paginationEl) paginationEl.style.display = 'none';
+            return;
+        }
+
+        paginationEl.style.display = 'flex';
+        // Обновление пагинации будет происходить через рендеринг
+    }
+
+    updateSelectedCount(selectedFiles, allFiles) {
+        const countEl = this.fileManager.element.querySelector('[data-selected-count]');
+        if (countEl) {
+            countEl.textContent = selectedFiles.length;
+        }
+
+        const sizeEl = this.fileManager.element.querySelector('[data-selected-size]');
+        if (sizeEl) {
+            const totalSize = allFiles
+                .filter(file => selectedFiles.includes(file.opPath))
                 .reduce((sum, file) => sum + (Number(file.size) || 0), 0);
-        },
-
-        get totalFilesCount() {
-            return this.files.length;
-        },
-
-        get totalFilesSize() {
-            return this.files.reduce((sum, file) => sum + (Number(file.size) || 0), 0);
-        },
-
-        // 3) Utils
-        t(key, params = {}) {
-            let s = this.translations?.[this.locale]?.[key] || this.translations?.en?.[key] || key;
-            for (const [k, v] of Object.entries(params)) {
-                s = s.replace(new RegExp('\\{' + k + '\\}', 'g'), String(v));
-            }
-            return s;
-        },
-
-        setLocale(loc) {
-            if (loc !== 'en' && loc !== 'ru') return;
-            this.locale = loc;
-            localStorage.setItem('sfiles_locale', loc);
-            try {
-                document.documentElement.lang = loc;
-                document.title = this.t('title');
-            } catch (e) {}
-        },
-
-        csrfToken() {
-            return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-        },
-
-        buildPublicUrl(publicPathOrPath) {
-            const p = String(publicPathOrPath || '').replace(/^\/+/, '');
-            return '/' + p;
-        },
-
-        showNotification(message, type = 'info', duration = 3000) {
-            this.notification = {
-                show: true,
-                message,
-                type
-            };
-
-            setTimeout(() => {
-                this.notification.show = false;
-            }, duration);
-        },
-
-        closeContextMenus() {
-            this.contextMenu.show = false;
-            this.fileContextMenu.show = false;
-        },
-
-        closeAllPopups() {
-            this.closeContextMenus();
-            this.previewModal.show = false;
-            this.renameModal.show = false;
-        },
-
-        setMenuPosition(menuObj, clientX, clientY) {
-            const menuW = 190;
-            const menuH = 200; // Увеличиваем для учета всех элементов
-
-            // Позиционируем меню рядом с курсором, но не слишком далеко
-            let x = clientX;
-            let y = clientY;
-
-            // Проверяем границы экрана
-            const maxX = window.innerWidth - menuW - 10;
-            const maxY = window.innerHeight - menuH - 10;
-
-            // Если меню выходит за правую границу, позиционируем слева от курсора
-            if (x > maxX) {
-                x = clientX - menuW - 10;
-            }
-
-            // Если меню выходит за нижнюю границу, позиционируем выше курсора
-            if (y > maxY) {
-                y = clientY - menuH - 10;
-            }
-
-            // Минимальные отступы от краев
-            menuObj.x = Math.max(10, Math.min(x, maxX));
-            menuObj.y = Math.max(10, Math.min(y, maxY));
-        },
-
-        openDirContextMenu(dir, event) {
-            event.preventDefault();
-            this.fileContextMenu.show = false;
-
-            this.contextMenu.dir = dir;
-            this.setMenuPosition(this.contextMenu, event.clientX + 5, event.clientY + 5);
-            this.contextMenu.show = true;
-        },
-
-        openFileContextMenu(file, e) {
-            e.preventDefault();
-            e.stopPropagation();
-
-            this.contextMenu.show = false; // если есть другое меню
-            this.fileContextMenu.file = file;
-
-            // Сначала показываем (чтобы можно было измерить размеры)
-            this.fileContextMenu.show = true;
-
-            this.$nextTick(() => {
-                const el = this.$refs.fileCtxMenu;
-                const rect = el.getBoundingClientRect();
-
-                let x = e.clientX + 6;
-                let y = e.clientY + 6;
-
-                // Правый/нижний край
-                if (x + rect.width > window.innerWidth - 10) {
-                    x = e.clientX - rect.width - 6;
-                }
-                if (y + rect.height > window.innerHeight - 10) {
-                    y = e.clientY - rect.height - 6;
-                }
-
-                // Защита от выхода за границы
-                this.fileContextMenu.x = Math.max(10, Math.min(x, window.innerWidth - rect.width - 10));
-                this.fileContextMenu.y = Math.max(10, Math.min(y, window.innerHeight - rect.height - 10));
-            });
-        },
-
-        async apiFetch(url, options = {}) {
-            const headers = options.headers || {};
-            const res = await fetch(url, {
-                credentials: 'same-origin',
-                ...options,
-                headers: {
-                    ...headers,
-                }
-            });
-
-            const text = await res.text();
-            let data = null;
-            try {
-                data = text ? JSON.parse(text) : null;
-            } catch (e) {
-                data = {raw: text};
-            }
-
-            if (!res.ok) {
-                let msg = data?.message || data?.error || `HTTP ${res.status}`;
-
-                // Rate limiting
-                if (res.status === 429) {
-                    msg = data?.rate_limit || this.t('rate_limit');
-                }
-
-                throw new Error(msg);
-            }
-
-            return data;
-        },
-
-        // 4) Data loading / navigation with cache
-        async fetchFiles(page = 1) {
-            this.loading = true;
-            this.lastError = null;
-            this.closeContextMenus();
-
-            const cacheKey = `files:${this.currentPath}:${page}`;
-
-            // Проверка кэша
-            if (this.cacheEnabled && this.cache.has(cacheKey)) {
-                const cached = this.cache.get(cacheKey);
-                if (Date.now() - cached.timestamp < 300000) { // 5 минут
-                    this.directories = cached.directories;
-                    this.files = cached.files;
-                    this.allFiles = cached.allFiles;
-                    this.pagination = cached.pagination || this.pagination;
-                    this.updateBreadcrumbs();
-                    this.loading = false;
-                    return;
-                }
-            }
-
-            try {
-                const url = `${this.config.filesUrl}?path=${encodeURIComponent(this.currentPath)}&page=${page}`;
-                const data = await this.apiFetch(url);
-
-                this.directories = Array.isArray(data?.directories) ? data.directories : [];
-
-                this.files = (Array.isArray(data?.files) ? data.files : []).map(f => {
-                    const publicPath = f.public_path || f.path || '';
-                    const opPath = f.disk_path || f.diskPath || publicPath;
-                    return {
-                        name: f.name,
-                        size: Number(f.size) || 0,
-                        publicPath,
-                        opPath
-                    };
-                });
-
-                this.allFiles = [...this.files];
-
-                // Обновление пагинации
-                if (data?.pagination) {
-                    this.pagination = {
-                        enabled: true,
-                        currentPage: data.pagination.current_page || page,
-                        perPage: data.pagination.per_page || 50,
-                        total: data.pagination.total || this.files.length,
-                        totalPages: data.pagination.total_pages || 1,
-                    };
-                } else {
-                    this.pagination.currentPage = page;
-                    this.pagination.total = this.files.length;
-                    this.pagination.totalPages = Math.ceil(this.files.length / this.pagination.perPage);
-                }
-
-                // Сохранение в кэш
-                if (this.cacheEnabled) {
-                    this.cache.set(cacheKey, {
-                        directories: this.directories,
-                        files: this.files,
-                        allFiles: this.allFiles,
-                        pagination: this.pagination,
-                        timestamp: Date.now()
-                    });
-                }
-
-                this.updateBreadcrumbs();
-            } catch (e) {
-                console.error('Error fetching files:', e);
-                this.lastError = e?.message || this.t('error_fetching');
-                this.showNotification(this.lastError, 'error');
-                this.directories = [];
-                this.files = [];
-                this.allFiles = [];
-                this.updateBreadcrumbs();
-            } finally {
-                this.loading = false;
-            }
-        },
-
-        clearCache(path = null) {
-            if (path === null) {
-                this.cache.clear();
-            } else {
-                // Очистка кэша для конкретного пути
-                for (const key of this.cache.keys()) {
-                    if (key.includes(`files:${path}:`)) {
-                        this.cache.delete(key);
-                    }
-                }
-            }
-        },
-
-        updateBreadcrumbs() {
-            const parts = this.currentPath.split('/').filter(Boolean);
-            this.breadcrumbs = ['root', ...parts];
-        },
-
-        goToBreadcrumb(index) {
-            this.selectedFiles = [];
-            this.closeContextMenus();
-
-            this.currentPath = index === 0 ? '' : this.breadcrumbs.slice(1, index + 1).join('/');
-            this.pagination.currentPage = 1;
-            this.fetchFiles(1);
-        },
-
-        openDirectory(dir) {
-            this.selectedFiles = [];
-            this.closeContextMenus();
-
-            this.currentPath = dir || '';
-            this.pagination.currentPage = 1;
-            this.fetchFiles(1);
-        },
-
-        goUp() {
-            this.selectedFiles = [];
-            this.closeContextMenus();
-
-            if (this.currentPath === '') return;
-            const parts = this.currentPath.split('/');
-            parts.pop();
-            this.currentPath = parts.join('/');
-            this.pagination.currentPage = 1;
-            this.fetchFiles(1);
-        },
-
-        goToPage(page) {
-            if (page < 1 || page > this.pagination.totalPages) return;
-            this.pagination.currentPage = page;
-            this.fetchFiles(page);
-        },
-
-        // 5) Folder ops
-        async createFolder() {
-            const name = this.newFolder.trim();
-            if (!name) return;
-
-            this.operationLoading = true;
-
-            const newPath = this.currentPath ? `${this.currentPath}/${name}` : name;
-
-            try {
-                await this.apiFetch(this.config.createFolderUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': this.csrfToken()
-                    },
-                    body: JSON.stringify({path: newPath})
-                });
-
-                this.newFolder = '';
-                this.clearCache(this.currentPath);
-                this.showNotification(this.t('folder_created'), 'success');
-                await this.fetchFiles(this.pagination.currentPage);
-            } catch (e) {
-                console.error('Folder create error:', e);
-                this.showNotification(e?.message || this.t('folder_create_error'), 'error');
-            } finally {
-                this.operationLoading = false;
-            }
-        },
-
-        async deleteFolder(dir) {
-            const target = String(dir || '').trim();
-            if (!target) return;
-
-            const folderName = target.split('/').pop() || target;
-            const confirmed = confirm(this.t('confirm_delete_folder', { name: folderName }));
-
-            if (!confirmed) return;
-
-            this.operationLoading = true;
-
-            try {
-                await this.apiFetch(this.config.deleteFolderUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': this.csrfToken()
-                    },
-                    body: JSON.stringify({path: target})
-                });
-
-                this.contextMenu.show = false;
-                this.clearCache(this.currentPath);
-                this.showNotification(this.t('folder_deleted'), 'success');
-                await this.fetchFiles(this.pagination.currentPage);
-            } catch (e) {
-                console.error('Folder delete error:', e);
-                this.showNotification(e?.message || this.t('folder_delete_error'), 'error');
-            } finally {
-                this.operationLoading = false;
-            }
-        },
-
-        copyDirectoryLink(dir) {
-            const target = String(dir || '').trim();
-            if (!target) return;
-
-            this.copyToClipboard(target, this.t('path_copied', { path: target }));
-        },
-
-        copyToClipboard(text, successMessage = null) {
-            if (successMessage == null) successMessage = this.t('copied_to_clipboard');
-            // Проверяем доступность Clipboard API
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(text)
-                    .then(() => this.showNotification(successMessage, 'success'))
-                    .catch(err => {
-                        console.error('Ошибка копирования через Clipboard API:', err);
-                        // Fallback на старый метод
-                        this.fallbackCopyToClipboard(text, successMessage);
-                    });
-            } else {
-                // Используем fallback метод
-                this.fallbackCopyToClipboard(text, successMessage);
-            }
-        },
-
-        // Fallback метод копирования через временный textarea
-        fallbackCopyToClipboard(text, successMessage) {
-            const textArea = document.createElement('textarea');
-            textArea.value = text;
-            textArea.style.position = 'fixed';
-            textArea.style.left = '-999999px';
-            textArea.style.top = '-999999px';
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-
-            try {
-                const successful = document.execCommand('copy');
-                document.body.removeChild(textArea);
-                if (successful) {
-                    this.showNotification(successMessage, 'success');
-                } else {
-                    this.showNotification(this.t('copy_failed'), 'error');
-                }
-            } catch (err) {
-                document.body.removeChild(textArea);
-                console.error('Fallback copy error:', err);
-                this.showNotification(this.t('copy_failed'), 'error');
-            }
-        },
-
-        downloadFolder(dir) {
-            const target = String(dir || '').trim();
-            if (!target) return;
-
-            this.closeContextMenus();
-            window.location.href = `${this.config.downloadFolderUrl}?path=${encodeURIComponent(target)}`;
-        },
-
-        // Rename
-        openRenameForFile(file) {
-            if (!file) return;
-            this.closeContextMenus();
-
-            this.renameModal = {
-                show: true,
-                type: 'file',
-                path: file.opPath,
-                displayName: file.name,
-                newName: file.name
-            };
-        },
-
-        openRenameForDir(dir) {
-            const target = String(dir || '').trim();
-            if (!target) return;
-            this.closeContextMenus();
-
-            const name = target.split('/').filter(Boolean).pop() || target;
-
-            this.renameModal = {
-                show: true,
-                type: 'dir',
-                path: target,
-                displayName: name,
-                newName: name
-            };
-        },
-
-        closeRenameModal() {
-            this.renameModal.show = false;
-        },
-
-        async submitRename() {
-            const newName = String(this.renameModal.newName || '').trim();
-            if (!newName) {
-                this.showNotification(this.t('name_required'), 'error');
-                return;
-            }
-
-            this.operationLoading = true;
-
-            try {
-                await this.apiFetch(this.config.renameUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': this.csrfToken()
-                    },
-                    body: JSON.stringify({
-                        type: this.renameModal.type,
-                        path: this.renameModal.path,
-                        new_name: newName
-                    })
-                });
-
-                this.selectedFiles = [];
-                this.renameModal.show = false;
-                this.clearCache(this.currentPath);
-                this.showNotification(this.t('renamed_success'), 'success');
-                await this.fetchFiles(this.pagination.currentPage);
-            } catch (e) {
-                console.error('Rename error:', e);
-                this.showNotification(e?.message || this.t('rename_error'), 'error');
-            } finally {
-                this.operationLoading = false;
-            }
-        },
-
-        // 6) File helpers / ops
-        isImage(file) {
-            return /\.(jpg|jpeg|png|gif|webp)$/i.test(file.name);
-        },
-
-        getFileIcon(file) {
-            const ext = file.name.split('.').pop().toLowerCase();
-            const icons = {
-                pdf: 'ph ph-file-pdf text-red-500',
-                doc: 'ph ph-file-doc text-blue-500',
-                docx: 'ph ph-file-doc text-blue-500',
-                xlsx: 'ph ph-file-xls text-green-500',
-                pptx: 'ph ph-file-ppt text-orange-500',
-                zip: 'ph ph-file-zip text-gray-500',
-                default: 'ph ph-file text-gray-500'
-            };
-            return icons[ext] || icons.default;
-        },
-
-        formatFileSize(size) {
-            const s = Number(size) || 0;
-            if (s < 1024) return s + ' B';
-            if (s < 1048576) return (s / 1024).toFixed(2) + ' KB';
-            if (s < 1073741824) return (s / 1048576).toFixed(2) + ' MB';
-            return (s / 1073741824).toFixed(2) + ' GB';
-        },
-
-        fileHref(file) {
-            return this.buildPublicUrl(file.publicPath);
-        },
-
-        previewFile(file) {
-            this.fileContextMenu.show = false;
-
-            const url = this.fileHref(file);
-            const extension = file.name.split('.').pop().toLowerCase();
-            const isWord = ['doc', 'docx'].includes(extension);
-
-            this.previewModal = {
-                show: true,
-                url,
-                type: isWord ? 'word' : this.isImage(file) ? 'image' : extension === 'pdf' ? 'pdf' : 'other'
-            };
-        },
-
-        openFileInNewTab(file) {
-            if (!file) return;
-            const url = this.fileHref(file);
-            window.open(url, '_blank');
-            this.fileContextMenu.show = false;
-        },
-
-        async deleteFile(file) {
-            const confirmed = confirm(this.t('confirm_delete_file', { name: file.name }));
-            if (!confirmed) return;
-
-            this.operationLoading = true;
-
-            try {
-                await this.apiFetch(this.config.deleteUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': this.csrfToken()
-                    },
-                    body: JSON.stringify({path: file.opPath})
-                });
-
-                this.clearCache(this.currentPath);
-                this.showNotification(this.t('file_deleted'), 'success');
-                await this.fetchFiles(this.pagination.currentPage);
-                this.selectedFiles = this.selectedFiles.filter(p => p !== file.opPath);
-            } catch (e) {
-                console.error('File delete error:', e);
-                this.showNotification(e?.message || this.t('file_delete_error'), 'error');
-            } finally {
-                this.operationLoading = false;
-            }
-        },
-
-        async deleteSelectedFiles() {
-            const count = this.selectedFiles.length;
-            if (!count) return;
-
-            const confirmed = confirm(this.t('confirm_delete_files', { count }));
-            if (!confirmed) return;
-
-            this.operationLoading = true;
-            const paths = [...this.selectedFiles];
-
-            try {
-                await Promise.all(paths.map(path =>
-                    this.apiFetch(this.config.deleteUrl, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': this.csrfToken()
-                        },
-                        body: JSON.stringify({path})
-                    })
-                ));
-
-                this.selectedFiles = [];
-                this.clearCache(this.currentPath);
-                this.showNotification(this.t('files_deleted', { count }), 'success');
-                await this.fetchFiles(this.pagination.currentPage);
-            } catch (e) {
-                console.error('Delete files error:', e);
-                this.showNotification(e?.message || this.t('files_delete_error'), 'error');
-            } finally {
-                this.operationLoading = false;
-            }
-        },
-
-        downloadSelectedFiles() {
-            if (!this.selectedFiles.length) return;
-
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = this.config.downloadFilesUrl;
-            form.target = '_blank';
-            form.style.display = 'none';
-
-            const csrf = document.createElement('input');
-            csrf.type = 'hidden';
-            csrf.name = '_token';
-            csrf.value = this.csrfToken();
-            form.appendChild(csrf);
-
-            this.selectedFiles.forEach(p => {
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'paths[]';
-                input.value = p;
-                form.appendChild(input);
-            });
-
-            document.body.appendChild(form);
-            form.submit();
-            form.remove();
-        },
-
-        copyFileLink() {
-            const file = this.fileContextMenu.file;
-            if (!file) return;
-
-            const url = this.fileHref(file);
-            this.copyToClipboard(url, this.t('link_copied', { url }));
-        },
-
-        passFiles() {
-            if (window.opener && !window.opener.closed) {
-                window.opener.handleSelectedFiles(this.selectedFiles);
-                window.close();
-            } else {
-                this.showNotification(this.t('parent_closed'), 'error');
-            }
-        },
-
-        /**
-         * Выбор файла при клике (для интеграции)
-         * 
-         * При клике на файл возвращает путь до выбранного файла через один из механизмов:
-         * 1. TinyMCE интеграция: window.opener.tinymceFilePickerCallback(url) - приоритет для TinyMCE
-         * 2. Callback функция window.sfilesOnFileSelect(fileData) - если определена
-         * 3. window.opener.handleFileSelect(fileData) - если открыт в popup
-         * 4. postMessage с типом 'sfiles_file_selected' или 'tinymce-file-selected' - для iframe/popup интеграции
-         * 5. Копирование пути в буфер обмена - если нет других способов
-         */
-        selectFile(file) {
-            if (!file) return;
-
-            const fileData = {
-                path: file.opPath,
-                publicPath: file.publicPath,
-                name: file.name,
-                size: file.size,
-                fullPath: file.publicPath || file.opPath
-            };
-
-            // Получаем публичный URL файла для передачи в TinyMCE
-            const fileUrl = this.fileHref(file);
-
-            // ПРИОРИТЕТ 1: TinyMCE интеграция через window.opener
-            if (window.opener && !window.opener.closed) {
-                // Проверяем наличие TinyMCE callback в родительском окне
-                if (typeof window.opener.tinymceFilePickerCallback === 'function') {
-                    try {
-                        window.opener.tinymceFilePickerCallback(fileUrl, {});
-                        // Закрываем popup после передачи файла
-                        if (window.closeTinyMCEFilePicker && typeof window.closeTinyMCEFilePicker === 'function') {
-                            window.closeTinyMCEFilePicker();
-                        } else {
-                            window.close();
-                        }
-                        return;
-                    } catch (e) {
-                        console.error('Error calling TinyMCE callback:', e);
-                    }
-                }
-            }
-
-            // ПРИОРИТЕТ 2: TinyMCE интеграция через postMessage (для iframe)
-            if (window.parent && window.parent !== window) {
-                // Проверяем, открыт ли файловый менеджер из TinyMCE (через iframe)
-                try {
-                    window.parent.postMessage({
-                        type: 'tinymce-file-selected',
-                        url: fileUrl,
-                        meta: {}
-                    }, '*');
-                    return;
-                } catch (e) {
-                    console.error('Error sending postMessage to parent:', e);
-                }
-            }
-
-            // ПРИОРИТЕТ 3: Проверяем наличие callback функции
-            if (typeof window.sfilesOnFileSelect === 'function') {
-                window.sfilesOnFileSelect(fileData);
-                return;
-            }
-
-            // ПРИОРИТЕТ 4: Если открыт в popup - передаем через window.opener
-            if (window.opener && !window.opener.closed) {
-                // Проверяем наличие функции обработки в родительском окне
-                if (typeof window.opener.handleFileSelect === 'function') {
-                    window.opener.handleFileSelect(fileData);
-                    window.close();
-                    return;
-                }
-                // Fallback: используем postMessage
-                window.opener.postMessage({
-                    type: 'sfiles_file_selected',
-                    data: fileData
-                }, '*');
-                window.close();
-                return;
-            }
-
-            // ПРИОРИТЕТ 5: Используем postMessage для связи с родительским окном (iframe/popup)
-            if (window.parent && window.parent !== window) {
-                window.parent.postMessage({
-                    type: 'sfiles_file_selected',
-                    data: fileData
-                }, '*');
-                return;
-            }
-
-            // Если нет способа передачи - копируем путь в буфер обмена
-            this.copyToClipboard(fileData.publicPath || fileData.path, this.t('path_copied', { path: fileData.publicPath || fileData.path }));
-        },
-
-        // 7) Selection
-        toggleAllFiles(checked) {
-            this.selectedFiles = checked ? this.filteredFiles.map(file => file.opPath) : [];
-        },
-
-        // 8) View
-        toggleView(mode) {
-            if (['grid', 'list'].includes(mode)) this.viewMode = mode;
-        },
-
-        // 9) Drag & Drop
-        handleDragOver(event) {
-            event.preventDefault();
-            event.stopPropagation();
-            this.dragOver = true;
-        },
-
-        handleDragLeave(event) {
-            event.preventDefault();
-            event.stopPropagation();
-
-            // Проверяем, что мы действительно покинули область
-            // relatedTarget может быть null или указывать на дочерний элемент
-            const relatedTarget = event.relatedTarget;
-            const currentTarget = event.currentTarget;
-
-            // Если relatedTarget null или не является дочерним элементом, скрываем
-            if (!relatedTarget || !currentTarget.contains(relatedTarget)) {
-                // Используем небольшую задержку для предотвращения мигания
-                setTimeout(() => {
-                    // Проверяем еще раз, что мы действительно вне области
-                    if (!this.dragOver) return;
-                    this.dragOver = false;
-                }, 50);
-            }
-        },
-
-        handleDrop(event) {
-            event.preventDefault();
-            event.stopPropagation();
-
-            // Сбрасываем состояние
-            this.dragOver = false;
-            this.dragOverCounter = 0;
-
-            const files = Array.from(event.dataTransfer.files);
-            if (files.length === 0) return;
-
-            // Используем Dropzone для загрузки
-            if (this.dropzoneInstance && this.dropzoneInstance.element) {
-                try {
-                    files.forEach(file => {
-                        // Проверяем, что файл валидный
-                        if (file && file.size > 0) {
-                            this.dropzoneInstance.addFile(file);
-                        }
-                    });
-                    this.showNotification(this.t('upload_start', { count: files.length }), 'info');
-                } catch (error) {
-                    console.error('Dropzone add files error:', error);
-                    this.showNotification(this.t('upload_error'), 'error');
-                }
-            } else {
-                this.showNotification(this.t('upload_system_error'), 'error');
-            }
-        },
-
-        // 10) Init
-        init() {
-            this.setLocale(this.locale); // apply saved locale to document (title, lang)
-            this.fetchFiles(1);
-
-            const self = this;
-
-            Dropzone.autoDiscover = false;
-
-            if (this.dropzoneInstance) {
-                this.dropzoneInstance.destroy();
-            }
-            if (this.dropzoneModalInstance) {
-                this.dropzoneModalInstance.destroy();
-            }
-
-            // Инициализируем dropzone на скрытом элементе для drag & drop
-            const uploadZoneHidden = document.getElementById("uploadZoneHidden");
-            if (uploadZoneHidden) {
-                this.dropzoneInstance = this.createDropzone(uploadZoneHidden, false);
-            }
-        },
-
-        createDropzone(element, clickable) {
-            const self = this;
-            return new Dropzone(element, {
-                url: self.config.uploadUrl,
-                paramName: "file",
-                maxFilesize: 10,
-                withCredentials: true,
-                timeout: 120000,
-                parallelUploads: 3,
-                addRemoveLinks: false,
-
-                transformFile: function (file, done) {
-                    if (file.type && file.type.startsWith('image/')) {
-                        new Compressor(file, {
-                            quality: 0.6,
-                            maxWidth: 2560,
-                            maxHeight: 2560,
-                            convertSize: 500000,
-                            success(result) {
-                                done(result);
-                            },
-                            error(err) {
-                                console.error('Compression error:', err);
-                                self.showNotification(self.t('image_compress_error'), 'warning');
-                                done(file);
-                            }
-                        });
-                    } else {
-                        done(file);
-                    }
-                },
-
-                renameFile: function (file) {
-                    return file.name;
-                },
-
-                headers: {
-                    'X-CSRF-TOKEN': self.csrfToken()
-                },
-
-                clickable: clickable,
-                autoProcessQueue: true,
-
-                init: function () {
-                    this.on("sending", function (file, xhr, formData) {
-                        formData.append("path", self.currentPath);
-                        self.isUploading = true;
-                        self.uploadProgress = 0;
-                    });
-
-                    this.on("uploadprogress", function (file, progress, bytesSent) {
-                        self.uploadProgress = Math.round(progress);
-                    });
-
-                    this.on("totaluploadprogress", function (progress) {
-                        self.uploadProgress = Math.round(progress);
-                    });
-
-                    this.on("success", function (file, response) {
-                        self.showNotification(self.t('file_uploaded', { name: file.name }), 'success');
-                        self.clearCache(self.currentPath);
-                        self.fetchFiles(self.pagination.currentPage);
-                    });
-
-                    this.on("error", function (file, message, xhr) {
-                        let errorMsg = self.t('upload_error_file');
-
-                        if (xhr && xhr.responseText) {
-                            try {
-                                const response = JSON.parse(xhr.responseText);
-                                errorMsg = response.message || response.error || errorMsg;
-                            } catch (e) {
-                                errorMsg = xhr.responseText || errorMsg;
-                            }
-                        } else if (typeof message === 'string') {
-                            errorMsg = message;
-                        } else if (message && message.message) {
-                            errorMsg = message.message;
-                        }
-
-                        self.showNotification(`Ошибка загрузки "${file.name}": ${errorMsg}`, 'error');
-                        console.error("Dropzone error:", {
-                            name: file?.name,
-                            status: xhr?.status,
-                            message,
-                            response: xhr?.responseText
-                        });
-                    });
-
-                    this.on("queuecomplete", function () {
-                        self.isUploading = false;
-                        setTimeout(() => {
-                            self.uploadProgress = 0;
-                        }, 500);
-                    });
-
-                    this.on("addedfile", function (file) {
-                        // Показываем прогресс для каждого файла
-                    });
-                }
-            });
-        },
-    };
+            sizeEl.textContent = this.fileManager.Utils.formatFileSize(totalSize);
+        }
+    }
+
+    openFileContextMenu(file, event) {
+        const x = event.clientX;
+        const y = event.clientY;
+        this.fileManager.stateManager.set('fileContextMenu', {
+            show: true,
+            x,
+            y,
+            file
+        });
+    }
+
+    openFolderContextMenu(dir, event) {
+        const x = event.clientX;
+        const y = event.clientY;
+        this.fileManager.stateManager.set('contextMenu', {
+            show: true,
+            x,
+            y,
+            dir
+        });
+    }
 }
 
-window.fileManager = fileManager;
-Alpine.start();
+/**
+ * Инициализация файлового менеджера
+ */
+export function initFileManager() {
+    const rootElement = document.querySelector('[data-file-manager]');
+    if (!rootElement) {
+        console.warn('File manager root element not found. Looking for default container...');
+        // Попытка найти контейнер по классу или ID
+        const fallback = document.querySelector('.file-manager-container') || 
+                        document.querySelector('#file-manager') ||
+                        document.body;
+        if (fallback === document.body) {
+            console.error('File manager container not found');
+            return null;
+        }
+        fallback.setAttribute('data-file-manager', '');
+        return initFileManager();
+    }
+
+    const fileManager = new FileManager(rootElement);
+    
+    // Инициализация компонентов
+    const fileListEl = rootElement.querySelector('[data-file-list]');
+    let fileList = null;
+    if (fileListEl) {
+        fileList = new FileList(fileListEl, fileManager);
+        // Подписываемся на изменения файлов для обновления списка
+        fileManager.stateManager.on('change:files', () => {
+            if (fileList) fileList.render();
+        });
+        fileManager.stateManager.on('filesLoaded', () => {
+            if (fileList) fileList.render();
+        });
+    }
+
+    const previewModalEl = rootElement.querySelector('[data-preview-modal]');
+    if (previewModalEl) {
+        new PreviewModal(previewModalEl, fileManager);
+    }
+
+    const renameModalEl = rootElement.querySelector('[data-rename-modal]');
+    if (renameModalEl) {
+        new RenameModal(renameModalEl, fileManager);
+    }
+
+    const fileContextMenuEl = rootElement.querySelector('[data-file-context-menu]');
+    if (fileContextMenuEl) {
+        new FileContextMenu(fileContextMenuEl, fileManager);
+    }
+
+    const folderContextMenuEl = rootElement.querySelector('[data-folder-context-menu]');
+    if (folderContextMenuEl) {
+        new FolderContextMenu(folderContextMenuEl, fileManager);
+    }
+    
+    // Создаем адаптер для связи с шаблонами
+    const adapter = new TemplateAdapter(fileManager);
+
+    // Инициализация Dropzone
+    initDropzone(fileManager);
+
+    // Загрузка файлов после небольшой задержки для инициализации компонентов
+    setTimeout(() => {
+        fileManager.fetchFiles(1);
+    }, 200);
+
+    // Экспортируем в window для глобального доступа
+    window.sfilesManager = fileManager;
+    window.sfilesAdapter = adapter;
+
+    return fileManager;
+}
+
+/**
+ * Инициализация Dropzone для загрузки файлов
+ */
+function initDropzone(fileManager) {
+    Dropzone.autoDiscover = false;
+
+    const uploadZoneHidden = document.getElementById('uploadZoneHidden');
+    if (uploadZoneHidden) {
+        fileManager.dropzoneInstance = createDropzone(uploadZoneHidden, false, fileManager);
+    }
+
+    const uploadZoneModal = document.getElementById('uploadZoneModal');
+    if (uploadZoneModal) {
+        fileManager.on('uploadModal:open', () => {
+            if (!fileManager.dropzoneModalInstance) {
+                fileManager.dropzoneModalInstance = createDropzone(uploadZoneModal, true, fileManager);
+            }
+        });
+    }
+}
+
+/**
+ * Создание экземпляра Dropzone
+ */
+function createDropzone(element, clickable, fileManager) {
+    const config = fileManager.options.config;
+    
+    return new Dropzone(element, {
+        url: config.uploadUrl,
+        paramName: 'file',
+        maxFilesize: 10,
+        withCredentials: true,
+        timeout: 120000,
+        parallelUploads: 3,
+        addRemoveLinks: false,
+        clickable: clickable,
+        autoProcessQueue: true,
+
+        transformFile: function(file, done) {
+            if (file.type && file.type.startsWith('image/')) {
+                new Compressor(file, {
+                    quality: 0.6,
+                    maxWidth: 2560,
+                    maxHeight: 2560,
+                    convertSize: 500000,
+                    success(result) {
+                        done(result);
+                    },
+                    error(err) {
+                        console.error('Compression error:', err);
+                        fileManager.showNotification(fileManager.t('image_compress_error'), 'warning');
+                        done(file);
+                    }
+                });
+            } else {
+                done(file);
+            }
+        },
+
+        headers: {
+            'X-CSRF-TOKEN': fileManager.api.getCsrfToken()
+        },
+
+        init: function() {
+            this.on('sending', function(file, xhr, formData) {
+                formData.append('path', fileManager.get('currentPath'));
+                fileManager.stateManager.set('isUploading', true);
+                fileManager.stateManager.set('uploadProgress', 0);
+            });
+
+            this.on('uploadprogress', function(file, progress) {
+                fileManager.stateManager.set('uploadProgress', Math.round(progress));
+            });
+
+            this.on('totaluploadprogress', function(progress) {
+                fileManager.stateManager.set('uploadProgress', Math.round(progress));
+            });
+
+            this.on('success', function(file, response) {
+                fileManager.showNotification(
+                    fileManager.t('file_uploaded', { name: file.name }),
+                    'success'
+                );
+                fileManager.clearCache(fileManager.get('currentPath'));
+                fileManager.fetchFiles(fileManager.get('pagination').currentPage);
+            });
+
+            this.on('error', function(file, message, xhr) {
+                let errorMsg = fileManager.t('upload_error_file');
+                
+                if (xhr && xhr.responseText) {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        errorMsg = response.message || response.error || errorMsg;
+                    } catch (e) {
+                        errorMsg = xhr.responseText || errorMsg;
+                    }
+                } else if (typeof message === 'string') {
+                    errorMsg = message;
+                } else if (message && message.message) {
+                    errorMsg = message.message;
+                }
+
+                fileManager.showNotification(`Ошибка загрузки "${file.name}": ${errorMsg}`, 'error');
+            });
+
+            this.on('queuecomplete', function() {
+                fileManager.stateManager.set('isUploading', false);
+                setTimeout(() => {
+                    fileManager.stateManager.set('uploadProgress', 0);
+                }, 500);
+            });
+        }
+    });
+}
+
+// Автоматическая инициализация при загрузке DOM
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initFileManager);
+} else {
+    initFileManager();
+}
+
+export default initFileManager;

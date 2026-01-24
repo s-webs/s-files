@@ -115,10 +115,10 @@
 
 {{-- JS: используем новую архитектуру --}}
 @php
-    $packageJs = base_path('packages/s-webs/s-files/resources/js/filemanager-new.js');
+    $packageJs = base_path('packages/s-webs/s-files/resources/js/filemanager.js');
     $viteJs = file_exists($packageJs)
-        ? 'packages/s-webs/s-files/resources/js/filemanager-new.js'
-        : 'vendor/s-webs/s-files/resources/js/filemanager-new.js';
+        ? 'packages/s-webs/s-files/resources/js/filemanager.js'
+        : 'vendor/s-webs/s-files/resources/js/filemanager.js';
 @endphp
 @vite([$viteJs])
 </body>
