@@ -16,19 +16,8 @@
 </head>
 <body class="overflow-hidden h-screen w-full bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
 
-{{-- Alpine-компонент инициализируется здесь --}}
-<div
-    x-data="fileManager()"
-    x-init="init()"
-    class="h-full relative"
-    @click="closeContextMenus()"
-    @keydown.escape.window="closeAllPopups()"
-    @dragover.prevent.stop="handleDragOver($event)"
-    @dragenter.prevent.stop="handleDragOver($event)"
-    @dragleave.prevent.stop="handleDragLeave($event)"
-    @drop.prevent.stop="handleDrop($event)"
-    x-ref="fmRoot"
->
+{{-- File Manager Container --}}
+<div data-file-manager class="h-full relative">
     {{-- Уведомления --}}
     <div x-show="notification.show"
          x-cloak
