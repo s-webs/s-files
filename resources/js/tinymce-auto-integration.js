@@ -33,12 +33,23 @@
         var useSfiles = false;
         var filePickerCallback = null;
         
+        // Проверяем различные варианты маркеров для S-Files интеграции
+        var filePickerValue = null;
+        
         // Проверяем в callbacks
-        if (config.callbacks && config.callbacks.file_picker_callback === 'sfiles') {
-            useSfiles = true;
+        if (config.callbacks && config.callbacks.file_picker_callback) {
+            filePickerValue = config.callbacks.file_picker_callback;
         }
         // Или проверяем напрямую в file_picker_callback
-        else if (config.file_picker_callback === 'sfiles') {
+        else if (config.file_picker_callback) {
+            filePickerValue = config.file_picker_callback;
+        }
+        
+        // Проверяем различные форматы маркера
+        if (filePickerValue === 'sfiles' || 
+            filePickerValue === '__SFILES__' ||
+            (typeof filePickerValue === 'object' && filePickerValue !== null && 
+             (filePickerValue.__sfiles__ === true || filePickerValue.__SFILES__ === true))) {
             useSfiles = true;
         }
         

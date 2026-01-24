@@ -49,8 +49,14 @@ return [
     ],
     
     'callbacks' => [
-        // Укажите 'sfiles' для автоматического подключения интеграции
-        'file_picker_callback' => 'sfiles',
+        // Вариант 1 (рекомендуется для админ-панелей с eval()):
+        // Используйте объект-маркер для безопасной сериализации
+        'file_picker_callback' => ['__sfiles__' => true],
+        
+        // Вариант 2 (для обычных проектов):
+        // Можно использовать строку 'sfiles', но если получаете ошибку 
+        // "sfiles is not defined", переключитесь на вариант 1
+        // 'file_picker_callback' => 'sfiles',
     ],
     
     'options' => [],
@@ -81,9 +87,31 @@ tinymce.init(config);
 ## Как это работает
 
 1. Скрипт `tinymce-auto-integration.js` перехватывает вызов `tinymce.init()`
-2. Проверяет, указано ли `'sfiles'` в `file_picker_callback`
-3. Если да, автоматически заменяет строку `'sfiles'` на реальную функцию интеграции
+2. Проверяет, указан ли маркер S-Files в `file_picker_callback` (строка `'sfiles'` или объект `['__sfiles__' => true]`)
+3. Если да, автоматически заменяет маркер на реальную функцию интеграции
 4. Тип файла (image/file/media) определяется автоматически на основе контекста TinyMCE
+
+## Решение проблемы "sfiles is not defined"
+
+Если вы получаете ошибку `ReferenceError: sfiles is not defined`, это означает, что ваша админ-панель использует `eval()` для обработки конфигурации, и строка `'sfiles'` интерпретируется как переменная.
+
+**Решение:** Используйте объект-маркер вместо строки:
+
+```php
+'callbacks' => [
+    'file_picker_callback' => ['__sfiles__' => true], // ✅ Безопасно для eval()
+],
+```
+
+Вместо:
+
+```php
+'callbacks' => [
+    'file_picker_callback' => 'sfiles', // ❌ Может вызвать ошибку с eval()
+],
+```
+
+Объект-маркер безопасно сериализуется в JSON и не интерпретируется как переменная при использовании `eval()`.
 
 ## Примеры
 
@@ -91,7 +119,7 @@ tinymce.init(config);
 
 ```php
 'callbacks' => [
-    'file_picker_callback' => 'sfiles',
+    'file_picker_callback' => ['__sfiles__' => true], // Безопасный вариант
 ],
 ```
 
@@ -104,7 +132,7 @@ tinymce.init(config);
     'height' => 800,
 ],
 'callbacks' => [
-    'file_picker_callback' => 'sfiles',
+    'file_picker_callback' => ['__sfiles__' => true],
 ],
 ```
 

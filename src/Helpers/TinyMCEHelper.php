@@ -6,7 +6,8 @@ class TinyMCEHelper
 {
     /**
      * Преобразует конфигурацию TinyMCE для использования с S-Files
-     * Заменяет строку 'sfiles' в file_picker_callback на специальный маркер
+     * Заменяет строку 'sfiles' в file_picker_callback на специальный объект-маркер
+     * который безопасно сериализуется в JSON
      * 
      * @param array $config Конфигурация TinyMCE
      * @return array Преобразованная конфигурация
@@ -14,24 +15,42 @@ class TinyMCEHelper
     public static function prepareConfig(array $config): array
     {
         // Если в callbacks есть file_picker_callback со значением 'sfiles'
-        if (isset($config['callbacks']['file_picker_callback']) && 
-            $config['callbacks']['file_picker_callback'] === 'sfiles') {
+        if (isset($config['callbacks']['file_picker_callback'])) {
+            $callback = $config['callbacks']['file_picker_callback'];
             
-            // Заменяем на специальный маркер, который будет обработан JavaScript
-            $config['callbacks']['file_picker_callback'] = '__SFILES_INTEGRATION__';
+            if ($callback === 'sfiles' || 
+                (is_array($callback) && isset($callback['__sfiles__']))) {
+                
+                // Заменяем на специальный объект-маркер, который безопасно сериализуется в JSON
+                // и не будет интерпретирован как переменная при eval()
+                $config['callbacks']['file_picker_callback'] = ['__sfiles__' => true];
+                
+                // Добавляем настройки для S-Files, если они не указаны
+                if (!isset($config['sfiles'])) {
+                    $config['sfiles'] = [
+                        'base_url' => route('sfiles.index'),
+                        'width' => 900,
+                        'height' => 600,
+                    ];
+                } else {
+                    // Убеждаемся, что base_url установлен
+                    if (!isset($config['sfiles']['base_url'])) {
+                        $config['sfiles']['base_url'] = route('sfiles.index');
+                    }
+                }
+            }
+        }
+        
+        // Также проверяем напрямую в file_picker_callback (для совместимости)
+        if (isset($config['file_picker_callback']) && $config['file_picker_callback'] === 'sfiles') {
+            $config['file_picker_callback'] = ['__sfiles__' => true];
             
-            // Добавляем настройки для S-Files, если они не указаны
             if (!isset($config['sfiles'])) {
                 $config['sfiles'] = [
                     'base_url' => route('sfiles.index'),
                     'width' => 900,
                     'height' => 600,
                 ];
-            } else {
-                // Убеждаемся, что base_url установлен
-                if (!isset($config['sfiles']['base_url'])) {
-                    $config['sfiles']['base_url'] = route('sfiles.index');
-                }
             }
         }
         
